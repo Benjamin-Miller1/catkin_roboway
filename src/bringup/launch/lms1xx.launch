@@ -1,0 +1,13 @@
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE"
+       value="$(find bringup)/launch/rosconsole.config"/>
+  <arg name="host" default="192.168.0.1" />
+  <arg name="publish_min_range_as_inf" default="false" />
+  <node pkg="lms1xx" name="lms1xx" type="LMS1xx_node" output="screen">
+    <param name="host" value="$(arg host)" />
+    <param name="publish_min_range_as_inf" value="$(arg publish_min_range_as_inf)" />
+    <remap from="/scan" to="/scan1" />
+  </node>
+  <node pkg="tf" type="static_transform_publisher" name="base_link_to_lasar" 
+    args="0.3 0 0 0 0 3.14159 /base_link /laser 100"/>
+</launch>

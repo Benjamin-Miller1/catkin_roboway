@@ -1,0 +1,11 @@
+roslaunch bringup cartographer_bag.launch bag_filename:=/home/autolabor/map.bag
+
+
+//处理地图
+rosrun cartographer_ros cartographer_pbstream_to_ros_map -map_filestem=test -pbstream_filename=/home/autolabor/.ros/test.pbstream -resolution=0.1
+scp /home/autolabor/.ros/test.* 192.168.8.101:/home/autolabor/
+
+//启动键盘控制
+nohup rosrun  roboway_tool keyboard_control  </dev/null >/dev/null 2>&1 &
+
+rosbag record -o test /clock /scan /tf_static /imu --lz4

@@ -1,0 +1,15 @@
+<launch>
+    <param name="use_sim_time" value="true" />
+    <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find bringup)/param/cartographer
+          -configuration_basename backpack_2d.lua
+          -save_state_filename test.pbstream"
+      output="screen">
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.1" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock $(arg bag_filename)" />
+</launch>

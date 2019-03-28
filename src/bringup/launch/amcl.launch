@@ -1,0 +1,9 @@
+<launch>
+    <include file="$(find bringup)/launch/lms511.launch"/>
+    <!-- 加载定位地图 -->
+    <node pkg="map_server" type="map_server" name="real_map_server" args="$(find bringup)/map/map2.yaml">
+	    <remap from="/map" to="/real_map" />
+    </node>
+    <!-- amcl定位 -->
+    <include file="$(find bringup)/param/amcl.xml"/>
+</launch>

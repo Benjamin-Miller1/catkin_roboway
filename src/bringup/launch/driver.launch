@@ -1,0 +1,12 @@
+<launch>
+    <include file="$(find bringup)/launch/urdf.launch"/>
+
+    <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
+        <param name="model_param" type="double" value="0.345"/>
+        <param name="wheel" type="double" value="0.68"/>
+    </node>
+
+    <node name="gps_node" pkg="serial_interface" type="gps_node" />
+
+    <include file="$(find bringup)/launch/ultrasound.launch"/>
+</launch>

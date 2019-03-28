@@ -1,0 +1,22 @@
+<launch>
+    <param name="/use_sim_time" value="true" />
+    <arg name="no_rviz" default="false"/>
+
+    <group unless="$(arg no_rviz)">
+        <node name="rviz" pkg="rviz" type="rviz" required="true"
+            args="-d $(find bringup)/param/demo_2d.rviz" />
+
+        <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+                type="cartographer_occupancy_grid_node" args="-resolution 0.1" />
+    </group>
+
+  <node name="cartographer_offline_node" pkg="cartographer_ros"
+      required="$(arg no_rviz)"
+      type="cartographer_offline_node" args="
+          -configuration_directory $(find bringup)/param/cartographer
+          -configuration_basenames backpack_2d.lua
+          -urdf_filenames $(find bringup)/param/robot.urdf
+          -bag_filenames $(arg bag_filenames)"
+      output="screen">
+  </node>
+</launch>

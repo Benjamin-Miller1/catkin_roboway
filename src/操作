@@ -1,0 +1,28 @@
+roslaunch velodyne_pointcloud VLP16_points.launch calibration:=/home/autolabor/catkin_roboway/src/bringup/param/VLP-16.yaml
+
+roslaunch bringup cartographer_bag.launch bag_filename:=/home/autolabor/map.bag
+
+
+//处理地图
+rosrun cartographer_ros cartographer_pbstream_to_ros_map -map_filestem=test -pbstream_filename=/home/autolabor/.ros/test.pbstream -resolution=0.1
+scp /home/autolabor/.ros/test.* 192.168.8.101:/home/autolabor/
+
+//启动键盘控制
+nohup rosrun  roboway_tool keyboard_control  </dev/null >/dev/null 2>&1 &
+
+
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find bringup)/param/cartographer
+          -configuration_basename backpack_2d.lua
+          -save_state_filename test.pbstream"
+      output="screen">
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.1" />
+
+
+"rosbag" type="record" args="-o $(arg bag_dir) /clock /odom /scan /tf_static /tf /imu --lz4"/>
+
+rosbag record -o test /scan /tf_static /tf /imu --lz4

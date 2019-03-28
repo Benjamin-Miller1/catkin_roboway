@@ -1,0 +1,65 @@
+{
+  "number": 4,
+  "config": [
+	{
+	"frame": "ultrasound0",
+	"function": "obstacle",
+	"index": 0,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound1",
+	"function": "obstacle",
+	"index": 9,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound2",
+	"function": "obstacle",
+	"index": 7,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound3",
+	"function": "obstacle",
+	"index": 5,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound4",
+	"function": "obstacle",
+	"index": 3,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound5",
+	"function": "obstacle",
+	"index": 1,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound6",
+	"function": "obstacle",
+	"index": 6,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound7",
+	"function": "obstacle",
+	"index": 4,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound8",
+	"function": "obstacle",
+	"index": 2,
+	"maxRange": 0.95
+  },
+  {
+	"frame": "ultrasound9",
+	"function": "obstacle",
+	"index": 8,
+	"maxRange": 0.95
+  }
+	]
+}

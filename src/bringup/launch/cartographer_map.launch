@@ -1,0 +1,11 @@
+<launch>
+    <node name="cartographer_assets_writer" pkg="cartographer_ros" required="true"
+        type="cartographer_assets_writer" args="
+            -configuration_directory $(find bringup)/param/cartographer
+            -configuration_basename assets_writer_ros_map.lua
+            -urdf_filename $(find bringup)/param/robot.urdf
+            -bag_filenames $(arg bag_filenames)
+            -pose_graph_filename $(arg bag_filenames).pbstream"
+        output="screen">
+    </node>
+</launch>
