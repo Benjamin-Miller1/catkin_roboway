@@ -78,9 +78,9 @@ obstacle_layer:
 # If true, the robot footprint will clear (mark as free) the space in which it travels. (bool, default: true)
   footprint_clearing_enabled: true
 # A list of observation source names separated by spaces. This defines each of the <source_name> namespaces defined below. (string, default: "")
-  observation_sources: scan
+  observation_sources: scan_top scan_front_bottom
   
-  scan:
+  scan_top:
 # The topic on which sensor data comes in for this source. Defaults to the name of the source. (string, default: source_name)
     topic: scan
 # The frame of the origin of the sensor. Leave empty to attempt to read the frame from sensor data. The frame can be read from both sensor_msgs/LaserScan, sensor_msgs/PointCloud, and sensor_msgs/PointCloud2 messages. (string, default: "")
@@ -106,12 +106,37 @@ obstacle_layer:
 # Allows for Inf values in "LaserScan" observation messages. The Inf values are converted to the laser maximum range.  (bool, default: false)
     inf_is_valid: true
 
+  scan_front_bottom:
+# The topic on which sensor data comes in for this source. Defaults to the name of the source. (string, default: source_name)
+    topic: scan1
+# The frame of the origin of the sensor. Leave empty to attempt to read the frame from sensor data. The frame can be read from both sensor_msgs/LaserScan, sensor_msgs/PointCloud, and sensor_msgs/PointCloud2 messages. (string, default: "")
+    sensor_frame: ""
+# How long to keep each sensor reading in seconds. A value of 0.0 will only keep the most recent reading. (double, default: 0.0)
+    observation_persistence: 0.0
+# How often to expect a reading from a sensor in seconds. A value of 0.0 will allow infinite time between readings. This parameter is used as a failsafe to keep the navigation stack from commanding the robot when a sensor has failed. It should be set to a value that is slightly more permissive than the actual rate of the sensor. For example, if we expect a scan from a laser every 0.05 seconds we might set this parameter to be 0.1 seconds to give a generous buffer and account for some amount of system latency. (double, default: 0.0)
+    expected_update_rate: 0.0
+# The data type associated with the topic, right now only "PointCloud", "PointCloud2", and "LaserScan" are supported. (string, default: "PointCloud")
+    data_type: LaserScan
+# Whether or not this observation should be used to clear out freespace.  (bool, default: false)
+    clearing: true
+# Whether or not this observation should be used to mark obstacles. (bool, default: true)
+    marking: true
+# The maximum height in meters of a sensor reading considered valid. This is usually set to be slightly higher than the height of the robot. Setting this parameter to a value greater than the global max_obstacle_height parameter has no effect. Setting this parameter to a value less than the global max_obstacle_height will filter out points from this sensor above that height.(double, default: 2.0)
+    max_obstacle_height: 2.0
+# The minimum height in meters of a sensor reading considered valid. This is usually set to be at ground height, but can be set higher or lower based on the noise model of your sensor. (double, default: 0.0)
+    min_obstacle_height: 0.0
+# The maximum range in meters at which to insert obstacles into the costmap using sensor data.  (double, default: 2.5)
+    obstacle_range: 3.0
+# The maximum range in meters at which to raytrace out obstacles from the map using sensor data.  (double, default: 3.0)
+    raytrace_range: 4.0
+# Allows for Inf values in "LaserScan" observation messages. The Inf values are converted to the laser maximum range.  (bool, default: false)
+    inf_is_valid: true
 #############################
 #
 #      sonar_layer
 #
 #############################
 sonar:
-  topics: ["/ultrasound0", "/ultrasound1", "/ultrasound2", "/ultrasound3"]
+  topics: ["/ultrasound0", "/ultrasound1", "/ultrasound2", "/ultrasound3", "/ultrasound4", "/ultrasound5", "/ultrasound6", "/ultrasound7", "/ultrasound8", "/ultrasound9"]
   no_readings_timeout: 0.0
   clear_on_max_reading: true

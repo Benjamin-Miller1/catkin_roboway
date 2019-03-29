@@ -8,4 +8,4 @@ scp /home/autolabor/.ros/test.* 192.168.8.101:/home/autolabor/
 //启动键盘控制
 nohup rosrun  roboway_tool keyboard_control  </dev/null >/dev/null 2>&1 &
 
-rosbag record -o test /clock /scan /tf_static /imu --lz4
+rosbag record -o test /scan /tf_static /imu --lz4

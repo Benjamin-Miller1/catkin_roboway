@@ -3,6 +3,8 @@
 
     <include file="$(find bringup)/launch/ultrasound.launch"/>
 
+    <include file="$(find bringup)/launch/lms1xx.launch"/>
+
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
         <rosparam file="$(find bringup)/param/move_base_params.yaml" command="load" />
         <rosparam file="$(find bringup)/param/global_costmap_params.yaml" command="load" ns="global_costmap"/>

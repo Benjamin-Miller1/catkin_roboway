@@ -4,11 +4,8 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Status1
-        - /Constraints1
-        - /LaserScan1
-        - /Axes1
+        - /TF1/Tree1
+        - /Map1
       Splitter Ratio: 0.600670993
     Tree Height: 747
   - Class: rviz/Selection
@@ -55,15 +52,33 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         base_link:
-          Value: true
-        imu_link:
           Value: true
         map:
           Value: true
         odom:
           Value: true
+        ultrasound0:
+          Value: false
+        ultrasound1:
+          Value: false
+        ultrasound2:
+          Value: false
+        ultrasound3:
+          Value: false
+        ultrasound4:
+          Value: false
+        ultrasound5:
+          Value: false
+        ultrasound6:
+          Value: false
+        ultrasound7:
+          Value: false
+        ultrasound8:
+          Value: false
+        ultrasound9:
+          Value: false
         velodyne:
           Value: true
       Marker Scale: 1
@@ -75,7 +90,25 @@ Visualization Manager:
         map:
           odom:
             base_link:
-              imu_link:
+              ultrasound0:
+                {}
+              ultrasound1:
+                {}
+              ultrasound2:
+                {}
+              ultrasound3:
+                {}
+              ultrasound4:
+                {}
+              ultrasound5:
+                {}
+              ultrasound6:
+                {}
+              ultrasound7:
+                {}
+              ultrasound8:
+                {}
+              ultrasound9:
                 {}
               velodyne:
                 {}
@@ -100,6 +133,7 @@ Visualization Manager:
       Name: Trajectories
       Namespaces:
         Trajectory 0: true
+        Trajectory 1: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -154,7 +188,7 @@ Visualization Manager:
       Draw Behind: false
       Enabled: true
       Name: Map
-      Topic: /map
+      Topic: /show_map
       Unreliable: false
       Use Timestamp: false
       Value: true
@@ -173,7 +207,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 196
+      Max Intensity: 188
       Min Color: 0; 0; 0
       Min Intensity: 1
       Name: LaserScan
@@ -195,6 +229,82 @@ Visualization Manager:
       Radius: 0.5
       Reference Frame: base_link
       Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: false
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 0.699999988
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ultrasound0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        ultrasound9:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: false
+        velodyne:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 100; 100; 100
@@ -219,7 +329,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 4.53001118
+      Angle: 4.62001085
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
@@ -229,11 +339,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 51.1107674
+      Scale: 36.8466949
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: -0.319357425
-      Y: -1.21468425
+      X: -0.728918612
+      Y: -1.12474477
     Saved: ~
 Window Geometry:
   Displays:
@@ -251,5 +361,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1855
-  X: 69
-  Y: 37
+  X: 65
+  Y: 24
