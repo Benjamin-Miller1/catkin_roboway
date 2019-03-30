@@ -1,0 +1,22 @@
+<launch>
+
+  <param name="use_sim_time" value="true" />
+
+  <include file="$(find bringup)/launch/urdf.launch"/>
+  
+  <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find bringup)/param/cartographer
+          -configuration_basename backpack_2d_localization.lua
+          -load_frozen_state true
+          -load_state_filename /home/autolabor/.ros/test.pbstream"
+      output="screen">
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.1">
+      <remap from="/map" to="/show_map" />
+  </node>
+  
+  <node name="playbag" pkg="rosbag" type="play" args="--clock $(arg bag_filename)" />
+</launch>
