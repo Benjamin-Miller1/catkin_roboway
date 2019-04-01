@@ -1,12 +1,17 @@
 <launch>
     <include file="$(find bringup)/launch/urdf.launch"/>
+    <arg name="output_tf" default="true" />
+    <arg name="is_publish_odom" default="true" />
 
     <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
         <param name="model_param" type="double" value="0.345"/>
         <param name="wheel" type="double" value="0.68"/>
+        <param name="output_tf" type="bool" value="$(arg output_tf)" />
+        <param name="is_publish_odom" type="bool" value="$(arg is_publish_odom)" />
     </node>
 
-    <node name="gps_node" pkg="serial_interface" type="gps_node" />
+    <node name="gps_node" pkg="serial_interface" type="gps_node"  respawn="true"/>
 
+    <!--include file="$(find bringup)/launch/robot_pose_ekf.launch"/-->
     <include file="$(find bringup)/launch/ultrasound.launch"/>
 </launch>

@@ -1,4 +1,4 @@
 <launch>
-    <include file="$(find bringup)/launch/lms511.launch"/>
+    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch"/>
     <include file="$(find bringup)/param/slam_gmapping_1.xml"/>
 </launch>

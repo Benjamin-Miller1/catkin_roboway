@@ -107,7 +107,7 @@ void Ultrasound::serial_read()
         boost::asio::streambuf::const_buffers_type bufs = sb.data();
         std::string line(boost::asio::buffers_begin(bufs), boost::asio::buffers_begin(bufs) + n);
         sb.consume(n);
-        ROS_INFO_STREAM(line);
+        //ROS_INFO_STREAM(line);
         if(line.substr(1, 10) == "ultrasound")
         {
             line = line.substr(line.find_first_of(',') + 1);

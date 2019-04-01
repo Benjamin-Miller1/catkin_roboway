@@ -147,8 +147,24 @@ int PRIM_ExplainActualPos(unsigned char address, unsigned char *ptr, int *result
     *result = PRIM_streamToint(ptr+2);
     return 0;
 }
-
-/*停止运动*/
+/*用于获取电机位置实际值*/
+unsigned char *PRIM_GetError(unsigned char address)
+{
+    static unsigned char data[8] = {0x00, 0x3D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    unsigned char *pdata = data;
+    data[0] = address;
+    unsigned short crc_result= getCRC16(data, 6);
+    PRIM_ushortTostream(crc_result, pdata + 6);
+    return data;
+}
+int PRIM_ExplainError(unsigned char address, unsigned char *ptr, int *result)
+{
+    if(ptr[0] != address || ptr[1] != 0x3D)
+        return -1;
+    *result = PRIM_streamToint(ptr+2);
+    return 0;
+}
+/*清除告警*/
 unsigned char *PRIM_ClearError(unsigned char address)
 {
     static unsigned char data[8] = {0x00, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};

@@ -12,7 +12,7 @@
     	
 	<param name="laser_max_beams"           value="60"/>
         <param name="laser_min_range"           value="0.2"/>
-        <param name="laser_max_range"           value="6.0"/>
+        <param name="laser_max_range"           value="50.0"/>
         
 	<param name="min_particles"             value="100"/>
     	<param name="max_particles"             value="5000"/>

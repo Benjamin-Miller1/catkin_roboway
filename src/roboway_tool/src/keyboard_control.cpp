@@ -178,14 +178,14 @@ void KeyboardControl::parseKeyboard(){
         }
         break;
       case CLEAR_ERROR:
-        {
+        if (ev_.value == 1){
           motor_control::motor_commond srv;
           srv.request.commond = 2;
           motor_control_client.call(srv);
           break;
         }
       default:
-        break;
+        continue;
       }
       publishCmdVel();
     }

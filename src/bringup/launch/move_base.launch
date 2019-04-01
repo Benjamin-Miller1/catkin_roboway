@@ -1,8 +1,6 @@
 <launch>
     <include file="$(find bringup)/launch/amcl.launch"/>
 
-    <include file="$(find bringup)/launch/ultrasound.launch"/>
-
     <!-- 加载导航地图 -->
     <node pkg="map_server" type="map_server" name="show_map_server" args="$(find bringup)/map/map2.yaml">
 	    <remap from="/map" to="/show_map" />

@@ -74,6 +74,8 @@ private:
 	int control_rate_;
   int RPM_MAX;
 	double model_param_;//理论上是左右两轮的间距
+  bool output_tf;
+  bool is_publish_odom;
   double round_per_meter;
   const double pulse_per_round = 10000;//pulse per round
   std::string odom_frame_{"odom"}, base_frame_{"base_link"};
@@ -97,5 +99,6 @@ private:
   bool can_send_getvelocity(unsigned char address);
   bool can_send_getposition(unsigned char address);
   bool can_send_enable(unsigned char address);
+  bool can_send_disable(unsigned char address);
   bool can_send_clear_error(unsigned char address);
 };
