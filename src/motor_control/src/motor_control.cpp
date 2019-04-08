@@ -162,7 +162,18 @@ bool MotorControl::can_send_velocity(unsigned char address, int velocity)
     canDevice.write((char *)&frame, sizeof(struct can_frame));
     return canDevice.read((char *)&frame, sizeof(struct can_frame));
 }
-
+double MotorControl::can_read_velocity(unsigned char address)
+{
+    double velocity;
+    struct can_frame frame;
+    frame.can_id  = address;
+    frame.can_dlc = 8;
+    memcpy(frame.data, PRIM_GetActVelocity(address), 8);
+    canDevice.write((char *)&frame, sizeof(struct can_frame));
+    canDevice.read((char *)&frame, sizeof(struct can_frame));
+    PRIM_ExplainActVelocity(frame.can_id, frame.data, &velocity);
+    return velocity;
+}
 bool MotorControl::can_send_getvelocity(unsigned char address)
 {
     struct can_frame frame;
@@ -230,7 +241,7 @@ void MotorControl::send_speed_callback()
 
     if(!is_motor_on)
       return;
-    is_motor_on = can_send_velocity(1, left) && can_send_velocity(2, right) && can_send_velocity(3, left) && can_send_velocity(4, right);
+    is_motor_on = can_send_velocity(1, left) && can_send_velocity(3, left) && can_send_velocity(2, right) && can_send_velocity(4, right);
 
     //ROS_INFO_STREAM("send -> left: " << left << "; right: " << right);
 }
@@ -307,6 +318,9 @@ void MotorControl::get_odometry_callback(const ros::TimerEvent&)
     {
         publish_odom();
     }
+    //double a1 = can_read_velocity(1);
+    //double 
+    //ROS_INFO_STREAM("1: " <<  << " 2: " << can_read_velocity(2) << " 3: " << can_read_velocity(3) << " 4: " << can_read_velocity(4));
 }
 
 void MotorControl::publish_odom()
@@ -322,8 +336,8 @@ void MotorControl::publish_odom()
     return;
   }
 
-  double delta_left_position = (position_left_latest - position_left_handle);
-  double delta_right_position = (-1) * (position_right_latest - position_right_handle);
+  double delta_left_position = (-1) * (position_left_latest - position_left_handle);
+  double delta_right_position = (position_right_latest - position_right_handle);
   //ROS_INFO_STREAM("receive position -> left: " << position_left_latest << "; right: " << position_right_latest);
   //ROS_INFO_STREAM("receive velocity -> left: " << velocity_left_latest << "; right: " << velocity_right_latest);
 
@@ -407,6 +421,11 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
             can_send_clear_error(3);
             can_send_clear_error(4);
             break;
+        case 3 : //odom清零
+            accumulation_th_ = 0;
+            accumulation_x_ = 0;
+            accumulation_y_ = 0;
+            break;
         default :
             break;
     }
@@ -417,7 +436,7 @@ void MotorControl::exec()
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &MotorControl::twist_callback, this);//处理move_base
     ros::Subscriber cmd_joy_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel_joy", 10, &MotorControl::twist_joy_callback, this);//处理joy
-    //ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
+    ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
     ros::Timer check_motor_timer = node.createTimer(ros::Duration(1.0), &MotorControl::check_motor_callback, this);
     ros::ServiceServer service = node.advertiseService("motor_control/commond", &MotorControl::commondCallback, this);
     ros::spin();

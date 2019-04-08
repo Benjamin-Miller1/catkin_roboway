@@ -1,1 +1,2 @@
 uint8 commond
+#0:禁止move_base、1：允许move_base、2：清除驱动器故障、3：里程计归零

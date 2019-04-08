@@ -101,4 +101,5 @@ private:
   bool can_send_enable(unsigned char address);
   bool can_send_disable(unsigned char address);
   bool can_send_clear_error(unsigned char address);
+  double can_read_velocity(unsigned char address);
 };

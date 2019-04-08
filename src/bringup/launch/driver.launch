@@ -4,7 +4,7 @@
     <arg name="is_publish_odom" default="true" />
 
     <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
-        <param name="model_param" type="double" value="0.345"/>
+        <param name="model_param" type="double" value="0.5"/>
         <param name="wheel" type="double" value="0.68"/>
         <param name="output_tf" type="bool" value="$(arg output_tf)" />
         <param name="is_publish_odom" type="bool" value="$(arg is_publish_odom)" />

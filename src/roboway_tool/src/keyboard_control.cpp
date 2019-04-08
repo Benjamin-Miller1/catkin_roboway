@@ -60,7 +60,6 @@ private:
 
   bool init();
   void parseKeyboard();
-  void twistCallback(const ros::TimerEvent&);
   void buttonTwistCheck(int value, int& state, int down, int up);
   void buttonScaleCheck(int value, double& scale, double step, double limit);
   void publishCmdVel();
@@ -116,7 +115,7 @@ void KeyboardControl::parseKeyboard(){
   while (true) {
     read(fd_, &ev_, sizeof(struct input_event));
     if (ev_.type == EV_KEY){
-      ROS_INFO_STREAM("INFO: [key]: " << ev_.code << ", [value]: " << ev_.value);
+      //ROS_INFO_STREAM("INFO: [key]: " << ev_.code << ", [value]: " << ev_.value);
       switch (ev_.code) {
       case KEYBOARD_UP:
         buttonTwistCheck(ev_.value, linear_state_, 1, -1);
@@ -182,8 +181,8 @@ void KeyboardControl::parseKeyboard(){
           motor_control::motor_commond srv;
           srv.request.commond = 2;
           motor_control_client.call(srv);
-          break;
         }
+        break;
       default:
         continue;
       }
@@ -193,6 +192,7 @@ void KeyboardControl::parseKeyboard(){
 }
 void KeyboardControl::publishCmdVel()
 {
+    static geometry_msgs::Twist twist_prev;
     geometry_msgs::Twist twist;
     twist.linear.x = 0;
     twist.angular.z = 0;
@@ -202,22 +202,17 @@ void KeyboardControl::publishCmdVel()
       twist.angular.z = angular_state_ * angular_scale_;
       if(twist.linear.x < 0)
         twist.angular.z = -1 * twist.angular.z;
+      if(twist_prev.linear.x == twist.linear.x && twist_prev.angular.z == twist.angular.z)
+        return;
       twist_pub_.publish(twist);
+      twist_prev = twist;
       ROS_DEBUG_STREAM("linear: " << twist.linear.x << " angular: " << twist.angular.z);
     }
     else{
       twist_pub_.publish(twist);
+      twist_prev = twist;
       ROS_DEBUG_STREAM("linear: " << 0 << " angular: " << 0);
     }
-}
-void KeyboardControl::twistCallback(const ros::TimerEvent &){
-  if (send_flag_){
-    geometry_msgs::Twist twist;
-    twist.linear.x = linear_state_ * linear_scale_;
-    twist.angular.z = angular_state_ * angular_scale_;
-    twist_pub_.publish(twist);
-    ROS_DEBUG_STREAM("linear: " << twist.linear.x << " angular: " << twist.angular.z);
-  }
 }
 
 
