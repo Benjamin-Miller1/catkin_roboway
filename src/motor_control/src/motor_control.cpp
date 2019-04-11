@@ -80,11 +80,11 @@ bool CanDevice::read(char *data, size_t size)
                 timer.cancel();
                 return true;
             case resultTimeoutExpired:
-                raw_socket->cancel();
+                //raw_socket->cancel();
                 return false;
             case resultError:
                 timer.cancel();
-                raw_socket->cancel();
+                //raw_socket->cancel();
                 return false;
         }
     }
@@ -210,10 +210,11 @@ MotorControl::MotorControl(): canDevice("can0")
 {
     double wheel_length = 0.705;
     control_rate_ = 10;
-    ros::param::get("~model_param", model_param_);
-    ros::param::get("~wheel", wheel_length);
-    ros::param::get("~output_tf", output_tf);
-    ros::param::get("~is_publish_odom", is_publish_odom);
+    ros::NodeHandle nh_("~");
+    nh_.param<double>("model_param", model_param_, 0.5);
+    nh_.param<double>("wheel", wheel_length, 0.68);
+    nh_.param<bool>("output_tf", output_tf, true);
+    nh_.param<bool>("is_publish_odom", is_publish_odom, true);
     round_per_meter = 1 / wheel_length * 30;//电机圈数（30为减速电机）每米    42.55
     RPM_MAX = 3000;
 }
@@ -291,6 +292,11 @@ void MotorControl::twist_callback(const geometry_msgs::Twist::ConstPtr& msg)
     }
 
     current_twist_ = *msg.get();
+    //限制move_base的原地旋转速度
+    if((std::abs(current_twist_.linear.x) < 0.05) && (std::abs(current_twist_.angular.z) > 0.2))
+    {
+        current_twist_.angular.z = current_twist_.angular.z > 0 ? 0.2 : -0.2;
+    }
     send_speed_callback();
     //ROS_INFO_STREAM("receive /cmd_vel msg.  v: " << current_twist_.linear.x << "w: " << current_twist_.angular.z);
 }
@@ -305,8 +311,29 @@ void MotorControl::check_motor_callback(const ros::TimerEvent&)
 {
     if(!is_motor_on)
     {
-      is_motor_on = can_send_enable(1) && can_send_enable(2) && can_send_enable(3) && can_send_enable(4);
+      if(!can_send_enable(1))
+      {
+          ROS_INFO_STREAM("is_motor_on1: " << is_motor_on);
+          return;
+      }
+      if(!can_send_enable(2))
+      {
+          ROS_INFO_STREAM("is_motor_on2: " << is_motor_on);
+          return;
+      }
+      if(!can_send_enable(3))
+      {
+          ROS_INFO_STREAM("is_motor_on3: " << is_motor_on);
+          return;
+      }
+      if(!can_send_enable(4))
+      {
+          ROS_INFO_STREAM("is_motor_on4: " << is_motor_on);
+          return;
+      }
     }
+    is_motor_on = true;
+    //ROS_INFO_STREAM("is_motor_on: " << is_motor_on);
 }
 void MotorControl::get_odometry_callback(const ros::TimerEvent&)
 {

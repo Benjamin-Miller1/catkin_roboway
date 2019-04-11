@@ -1,0 +1,7 @@
+<library path="lib/libcustom_planner">
+  <class name="custom_planner/CustomPlanner" type="custom_planner::CustomPlanner" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>
+      A custom global planner
+    </description>
+  </class>
+</library>

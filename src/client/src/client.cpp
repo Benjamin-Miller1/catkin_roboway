@@ -1,5 +1,4 @@
 #include <ros/ros.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <client/commond.h>
 #include "nlohmann/json.hpp"
@@ -48,13 +47,14 @@ public:
     void exec();
     void init_socket();
     void readCommond();
-    void gps_callback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void gps_callback(const geometry_msgs::Pose::ConstPtr& msg);
     bool commondCallback(client::commond::Request & request, client::commond::Response & response);
     void get_pose_callback();
     void navigation();
 
+    void send_started();
     void send_reachStartPoint();
-    void send_realTimePoint();
+    void send_realTimePoint(const ros::TimerEvent&);
     void send_reachEndPoint();
 
     ~Client();
@@ -72,7 +72,7 @@ private:
     string realTimePoint_latitude;
     string carId{"000001"};
 
-    int lastTimeInMin();
+    int getRemainTime();
     void dealCommond(int type);
     enum status_T
     {START, END, STARTTOEND, ENDTOSTART, STOP, PARKING, PARKINGTOSTART};
@@ -85,40 +85,68 @@ private:
 
     tf::StampedTransform base_link_pose;
     double pi = 3.1415;
-
+    bool isSendMsgToServer;
+    double remainTimeInMin;
 };
-int Client::lastTimeInMin()
+int Client::getRemainTime()
 {
-    return 25;
+    return static_cast<int>(remainTimeInMin);
 }
+void Client::send_started()
+{
+    if(!isSendMsgToServer)
+        return;
+    json commond;
+    commond["position"]["longitude"] = startPoint_longitude;
+    commond["position"]["latitude"] = startPoint_latitude;
+    commond["location"] = "started";
+    commond["communicationId"] = carId;
+    commond["arriveTime"] = std::to_string(getRemainTime());
+
+    string commondString = commond.dump();
+    commondString = "$" + commondString + "$";
+    write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
+}
+
 void Client::send_reachStartPoint()
 {
+    if(!isSendMsgToServer)
+        return;
     json commond;
     commond["position"]["longitude"] = startPoint_longitude;
     commond["position"]["latitude"] = startPoint_latitude;
     commond["location"] = "startPoint";
     commond["communicationId"] = carId;
-    commond["arriveTime"] = std::to_string(lastTimeInMin());
+    commond["arriveTime"] = std::to_string(getRemainTime());
 
     string commondString = commond.dump();
     commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
 }
-void Client::send_realTimePoint()
+void Client::send_realTimePoint(const ros::TimerEvent&)
 {
+    if((status != STARTTOEND) || (status != ENDTOSTART))
+        return;
+    if(!isSendMsgToServer)
+        return;
     json commond;
     commond["position"]["longitude"] = realTimePoint_longitude;
     commond["position"]["latitude"] = realTimePoint_latitude;
     commond["location"] = "running";
     commond["communicationId"] = carId;
-    commond["arriveTime"] = std::to_string(lastTimeInMin());
+    commond["arriveTime"] = std::to_string(getRemainTime());
 
     string commondString = commond.dump();
     commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
 }
 void Client::send_reachEndPoint()
 {
+    if(!isSendMsgToServer)
+        return;
     json commond;
     commond["position"]["longitude"] = endPoint_longitude;
     commond["position"]["latitude"] = endPoint_latitude;
@@ -128,12 +156,13 @@ void Client::send_reachEndPoint()
     string commondString = commond.dump();
     commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
 }
 void Client::dealCommond(int type)
 {
     if(type == 0)//到达start位置
     {
-        //send_reachStartPoint();
+        send_reachStartPoint();
         status = START;
     }
     else if(type == 1)//出发
@@ -181,47 +210,46 @@ void Client::get_pose_callback()
     }
 }
 
-
 int Client::moveSinglePath(vector<Pose> &singlePath)
 {
-	int nextGoalIndex = 0;
+	int goalIndex = 0;
 	while(1 && (status == STARTTOEND || status == ENDTOSTART))
 	{
         //判断车是否在起点(看车头朝向)  朝向大于90度时需要增加一个位置调整角度
         double roll, pitch, yaw;
         tf::Matrix3x3(base_link_pose.getRotation()).getRPY(roll, pitch, yaw);
 
-        double diff_abs = std::abs(yaw - singlePath[nextGoalIndex].yaw);
+        double diff_abs = std::abs(yaw - singlePath[goalIndex].yaw);
 
-        if((diff_abs > pi/2) && (diff_abs < pi*3/2))
-        {
-            Pose pose;
-            pose.x = base_link_pose.getOrigin().x();
-            pose.y = base_link_pose.getOrigin().y();
+        // if((diff_abs > pi/2) && (diff_abs < pi*3/2))
+        // {
+        //     Pose pose;
+        //     pose.x = base_link_pose.getOrigin().x();
+        //     pose.y = base_link_pose.getOrigin().y();
 
-            double diff = yaw - singlePath[nextGoalIndex].yaw;
+        //     double diff = yaw - singlePath[goalIndex].yaw;
             
-            if(((diff <= 0) && (diff >= -1 * pi)) || ((diff <= 2 * pi) && (diff >= pi)))//当前位置在目标的右边 需要左转  +pi/2
-            {
-                pose.yaw = (yaw < pi/2) ? (yaw + pi/2) : (yaw + pi/2 - 2*pi);
-            }
-            else//当前位置在目标的左边 需要右转  -pi/2
-            {
-                pose.yaw = (yaw > -1*pi/2) ? (yaw - pi/2) : (yaw - pi/2 + 2*pi);
-            }
+        //     if(((diff <= 0) && (diff >= -1 * pi)) || ((diff <= 2 * pi) && (diff >= pi)))//当前位置在目标的右边 需要左转  +pi/2
+        //     {
+        //         pose.yaw = (yaw < pi/2) ? (yaw + pi/2) : (yaw + pi/2 - 2*pi);
+        //     }
+        //     else//当前位置在目标的左边 需要右转  -pi/2
+        //     {
+        //         pose.yaw = (yaw > -1*pi/2) ? (yaw - pi/2) : (yaw - pi/2 + 2*pi);
+        //     }
 
-            auto i = singlePath.begin() + nextGoalIndex;
-            singlePath.insert(i, pose);
-        }
+        //     auto i = singlePath.begin() + goalIndex;
+        //     singlePath.insert(i, pose);
+        // }
 
         //设置目标
 	    move_base_msgs::MoveBaseGoal goal;
 	    goal.target_pose.header.frame_id = "map";
 	    goal.target_pose.header.stamp = ros::Time::now();
-	    goal.target_pose.pose.position.x = singlePath[nextGoalIndex].x;
-	    goal.target_pose.pose.position.y = singlePath[nextGoalIndex].y;
-	    goal.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(singlePath[nextGoalIndex].yaw);
-	    ROS_INFO("Sending goal  x=%f, y=%f, yaw=%f", singlePath[nextGoalIndex].x,singlePath[nextGoalIndex].y, singlePath[nextGoalIndex].yaw);
+	    goal.target_pose.pose.position.x = singlePath[goalIndex].x;
+	    goal.target_pose.pose.position.y = singlePath[goalIndex].y;
+	    goal.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(singlePath[goalIndex].yaw);
+	    ROS_INFO("Sending goal  x=%f, y=%f, yaw=%f", singlePath[goalIndex].x,singlePath[goalIndex].y, singlePath[goalIndex].yaw);
 	    while(1)
 	    {
 	        ac->sendGoal(goal);
@@ -240,21 +268,32 @@ int Client::moveSinglePath(vector<Pose> &singlePath)
                 }
                 double roll, pitch, yaw;
                 tf::Matrix3x3(base_link_pose.getRotation()).getRPY(roll, pitch, yaw);
-                
-	            ROS_INFO("running");
-                ROS_INFO_STREAM("x:" << base_link_pose.getOrigin().x() << " y:" << base_link_pose.getOrigin().y() << " yaw:" << yaw);
+
+                //计算剩余时间
+                double remainDistance = 0;
+                remainDistance += std::sqrt((base_link_pose.getOrigin().x() - singlePath[goalIndex].x) * (base_link_pose.getOrigin().x() - singlePath[goalIndex].x)
+                                      + (base_link_pose.getOrigin().y() - singlePath[goalIndex].y) * (base_link_pose.getOrigin().y() - singlePath[goalIndex].y));
+                for(int goalPoint = goalIndex; goalPoint < singlePath.size() - 1; goalPoint++)
+                {
+                    remainDistance += std::sqrt((singlePath[goalIndex + 1].x - singlePath[goalIndex].x) * (singlePath[goalIndex + 1].x - singlePath[goalIndex].x)
+                                      + (singlePath[goalIndex + 1].y - singlePath[goalIndex].y) * (singlePath[goalIndex + 1].y - singlePath[goalIndex].y));
+                }
+                remainTimeInMin = remainDistance / 0.5 / 60;
+
+                ROS_INFO_STREAM("running" << "x:" << base_link_pose.getOrigin().x() << " y:" << base_link_pose.getOrigin().y() << " yaw:" << yaw << " remainTime: " << remainDistance / 0.5);
 	        }
 	        ROS_INFO("finish one point");
+
 	        if(ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
 	        {
 	            ROS_INFO("reach one point");
-	            if(nextGoalIndex == singlePath.size() - 1)//如果是走到了最后一个点,发送消息到后台
+	            if(goalIndex == singlePath.size() - 1)//如果是走到了最后一个点,发送消息到后台
 	            {
                     return 0;
 	            }
 	            else //下一个点
 	            {
-	                nextGoalIndex++;
+	                goalIndex++;
 	                break;
 	            }
 	        }
@@ -284,7 +323,7 @@ void Client::navigation()
             {
                 ROS_INFO("reach end and change status to end");
                 status = END;
-                //send_reachEndPoint();
+                send_reachEndPoint();
             }
         }
 
@@ -314,7 +353,7 @@ void Client::navigation()
             {
                 ROS_INFO("reach start and change status to start");
                 status = START;
-                //send_reachStartPoint();
+                send_reachStartPoint();
             }
 
         }
@@ -353,14 +392,10 @@ Client::Client()
 {
     ros::param::get("~ipaddress", serveraddrstr);
     ros::param::get("~port", serverportstr);
+    ros::param::get("~online", isSendMsgToServer);
 
-    startPoint_longitude = "121.496675";
-    startPoint_latitude = "31.301406";
-    endPoint_longitude = "121.507685";
-    endPoint_latitude = "31.304957";
     realTimePoint_longitude = "";
     realTimePoint_latitude = "";
-
 }
 void Client::init_socket()
 {
@@ -385,16 +420,6 @@ void Client::init_socket()
     {
         ROS_INFO("connect server fail!");
     }
-    // {
-    //     static int interval = 1;
-	//     sleep(interval);
-    //     interval *= 2;
-    //     if(interval > 8)
-    //     {
-    //         exit(1);
-    //         perror("socket error");
-    //     }
-    // }
 }
 void Client::readCommond()
 {
@@ -409,24 +434,37 @@ void Client::readCommond()
             if(commond["communicationId"] != carId)
                 continue;
             auto commandType = commond["commandType"];
-            if(commandType == "start")
+            if(commandType == "connection")
             {
-                
-            }
-            else if(commandType == "connection")
-            {
-                status = PARKINGTOSTART;
+                startPoint_longitude = commond["startPoint"]["longitude"];
+                startPoint_latitude = commond["startPoint"]["latitude"];
+                endPoint_longitude = commond["endPoint"]["longitude"];
+                endPoint_latitude = commond["endPoint"]["latitude"];
+
                 //起点终点停车点先忽略，本地已知
                 //车辆需要走到起点，到达起点后  通过手柄控制发送 location = startPoint的消息体
-                ROS_INFO("car has connect to server， running to start");
+                ROS_INFO("car has connect to server, running to start");
+                send_reachStartPoint();
+                status = START;
             }
             else if(commandType == "start")
             {
                 //开始向终点导航
+                if(status == START || status == STOP)
+                {
+                    status = STARTTOEND;
+                }
+                send_started();
+                ROS_INFO("running to end");
             }
             else if(commandType == "back")
             {
                 //返回到起点
+                if(status == END || status == STOP)
+                {
+                    status = ENDTOSTART;
+                }
+                ROS_INFO("running to start");
             }
             else if(commandType == "parking")
             {
@@ -443,9 +481,21 @@ void Client::readCommond()
         }
     }
 }
-void Client::gps_callback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+void Client::gps_callback(const geometry_msgs::Pose::ConstPtr& msg)
 {
-
+    double latitude = std::stod(startPoint_latitude);
+    double longitude = std::stod(startPoint_longitude);
+    
+    if(std::abs(msg->position.x - latitude ) > 1 || std::abs(msg->position.y - longitude ) > 1)
+    {
+        realTimePoint_latitude = startPoint_latitude;
+        realTimePoint_longitude = startPoint_longitude;
+    }
+    else
+    {
+        realTimePoint_latitude = std::to_string(msg->position.x);
+        realTimePoint_longitude = std::to_string(msg->position.y);
+    }
 }
 
 void Client::exec()
@@ -467,9 +517,10 @@ void Client::exec()
 
     std::thread pose_thread(&Client::get_pose_callback, this);
     pose_thread.detach();
-    
-    ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::PoseStamped>("/gps", 10, &Client::gps_callback, this);
+
+    ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Pose>("/gps", 10, &Client::gps_callback, this);
     ros::ServiceServer service = node.advertiseService("commond", &Client::commondCallback, this);
+    ros::Timer sendRealTimePointTimer = node.createTimer(ros::Duration(5), &Client::send_realTimePoint, this);
     ros::spin();
 }
 

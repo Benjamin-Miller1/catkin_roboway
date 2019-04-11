@@ -67,14 +67,15 @@ int main(int argc, char **argv)
         sb.consume(n);
         if(line.substr(1, 8) == "INSPVAXA")
         {
+            ROS_INFO_STREAM(line);
             std::string subline = line.substr(line.find_first_of(';') + 1);
             std::vector<std::string> param_vector;
             Split(subline, ",", param_vector);
-            //if(param_vector[0] == "INS_SOLUTION_GOOD"  && (param_vector[1] == "INS_RTKFIXED" || param_vector[1] == "INS_RTKFLOAT"))
+            if(param_vector[0] == "INS_SOLUTION_GOOD"  && (param_vector[1] == "INS_RTKFIXED" || param_vector[1] == "INS_RTKFLOAT"))
             {
                 geometry_msgs::Pose gpsPose;
                 gpsPose.position.x = std::stod(param_vector[2]);//纬度
-                gpsPose.position.y = std::stod(param_vector[2]);//经度
+                gpsPose.position.y = std::stod(param_vector[3]);//经度
                 gps_pub.publish(gpsPose);
             }
         }
@@ -88,7 +89,6 @@ int main(int argc, char **argv)
             sensor_msgs::Imu imu_data;
             imu_data.header.stamp = ros::Time::now();
             imu_data.header.frame_id = "base_link";
-
 
             tf::Quaternion quat = tf::createQuaternionFromYaw(0);
             imu_data.orientation.x = quat.x();

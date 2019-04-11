@@ -8,4 +8,7 @@ rosbag record -o test /scan /imu --lz4
 rosservice call /motor_control/commond "commond: 3"
 
 cd /home/autolabor/code/catkin_roboway/src/bringup/map
-rosrun map_server map_saver -f room
+rosrun map_server map_saver -f map2
+cp map2.pgm map2_modify.pgm
+cp map2.yaml map2_modify.yaml
+sed -i s/map2/map2_modify/ map2_modify.yaml

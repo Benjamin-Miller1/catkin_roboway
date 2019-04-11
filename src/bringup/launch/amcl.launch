@@ -1,5 +1,7 @@
 <launch>
-    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch"/>
+    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" >
+        <arg name="view_width" value="6.28" />
+    </include>
     <!-- 加载定位地图 -->
     <node pkg="map_server" type="map_server" name="real_map_server" args="$(find bringup)/map/map2.yaml">
 	    <remap from="/map" to="/real_map" />
