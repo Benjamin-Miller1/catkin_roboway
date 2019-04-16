@@ -2,7 +2,7 @@
     <include file="$(find bringup)/launch/amcl.launch"/>
      <env name="ROSCONSOLE_CONFIG_FILE" value="$(find bringup)/launch/rosconsole.config"/>
     <!-- 加载导航地图 -->
-    <node pkg="map_server" type="map_server" name="show_map_server" args="$(find bringup)/map/map2_modify.yaml">
+    <node pkg="map_server" type="map_server" name="show_map_server" args="$(find bringup)/map/map_modify.yaml">
 	    <remap from="/map" to="/show_map" />
     </node>
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

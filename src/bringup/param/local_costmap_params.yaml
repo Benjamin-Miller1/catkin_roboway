@@ -31,6 +31,7 @@ always_send_full_costmap: false
 
 # Sequence of plugin specifications, one per layer. Each specification is a dictionary with name and type fields. The name is used to define the parameter namespace for the plugin.
 plugins:
+  - {name: static_layer,            type: "costmap_2d::StaticLayer"}
   - {name: obstacle_layer,          type: "costmap_2d::ObstacleLayer"}
   - {name: inflation_layer,         type: "costmap_2d::InflationLayer"}
   - {name: sonar,                   type: "range_sensor_layer::RangeSensorLayer"}
@@ -41,13 +42,38 @@ width: 5.0
 height: 5.0
 
 # The resolution of the map in meters/cell. (double, default: 0.05)
-resolution: 0.05
+resolution: 0.1
 
 # The x origin of the map in the global frame in meters. (double, default: 0.0)
 origin_x: 0.0
 
 # The y origin of the map in the global frame in meters. (double, default: 0.0)
 origin_y: 0.0
+
+static_layer:
+# The value for which a cost should be considered unknown when reading in a map from the map server. If the costmap is not tracking unknown space, costs of this value will be considered occupied. A value of zero also results in this parameter being unused. (int, default: -1)
+  unknown_cost_value: -1
+
+# The threshold value at which to consider a cost lethal when reading in a map from the map server.(int, default: 100)
+  lethal_cost_threshold: 100
+
+# The topic that the costmap subscribes to for the static map. This parameter is useful when you have multiple costmap instances within a single node that you want to use different static maps. (string, default: "map")
+  map_topic: show_map
+
+# Only subscribe to the first message on the map topic, ignoring all subsequent messages (bool, default: false)
+  first_map_only: false
+
+# In addition to map_topic, also subscribe to map_topic + "_updates" (bool, default: false)
+  subscribe_to_updates: false
+
+# If true, unknown values in the map messages are translated directly to the layer. Otherwise, unknown values in the map message are translated as FREE_SPACE in the layer.  (bool, default: true)
+  track_unknown_space: true
+
+# Only matters if the static layer is not the bottom layer. If true, only the maximum value will be written to the master costmap. (bool, default: false)
+  use_maximum: false
+
+# If true, translates all map message values to NO_INFORMATION/FREE_SPACE/LETHAL_OBSTACLE (three values). If false, a full spectrum of intermediate values is possible. (bool, default: true)
+  trinary_costmap: true
 
 #############################
 #

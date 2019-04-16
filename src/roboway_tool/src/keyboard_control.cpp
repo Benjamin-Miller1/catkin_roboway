@@ -78,7 +78,7 @@ KeyboardControl::KeyboardControl():linear_state_(0), angular_state_(0), port_nam
   private_node.param("linear_max", linear_max_, 1.2);
   private_node.param("linear_step", linear_step_, 0.2);
 
-  private_node.param("angular_min", angular_min_, 0.35);
+  private_node.param("angular_min", angular_min_, 0.15);
   private_node.param("angular_max", angular_max_, 1.35);
   private_node.param("angular_step", angular_step_, 0.25);
 
