@@ -7,4 +7,3 @@ el_isolated/
 .ycm_extra_conf.py
 .ycm_extra_conf.pyc
 .catkin_workspace
-src/bringup/map

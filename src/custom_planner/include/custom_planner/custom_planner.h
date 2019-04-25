@@ -49,8 +49,29 @@
 
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
+#include <vector>
+using namespace std;
 
 namespace custom_planner{
+  struct Pose
+  {
+      Pose():x(0), y(0), yaw(0), type(-1){}
+      double x;
+      double y;
+      double yaw;
+      int type;//0:起点 1:终点 -1:普通
+      bool operator==(const Pose &pose)
+      {
+        if(x == pose.x && x == pose.x && yaw != pose.yaw)
+          return true;
+        return false;
+      }
+      bool operator!=(const Pose &pose)
+      {
+        return ! (*this == pose);
+      }
+  };
+
   /**
    * @class CustomPlanner
    * @brief Provides a simple global planner that will compute a valid goal point for the local planner by walking back along the vector between the robot and the user-specified goal point until a valid cost is found.
@@ -87,20 +108,10 @@ namespace custom_planner{
 
     private:
       costmap_2d::Costmap2DROS* costmap_ros_;
-      double step_size_, min_dist_from_robot_;
-      costmap_2d::Costmap2D* costmap_;
-      base_local_planner::WorldModel* world_model_; ///< @brief The world model that the controller will use
 
-      /**
-       * @brief  Checks the legality of the robot footprint at a position and orientation using the world model
-       * @param x_i The x position of the robot 
-       * @param y_i The y position of the robot 
-       * @param theta_i The orientation of the robot
-       * @return 
-       */
-      double footprintCost(double x_i, double y_i, double theta_i);
-
-      bool initialized_;
+      Pose startPoint,endPoint;
+      vector<Pose> pathVector;
+      vector<Pose> planVector;
   };
 };  
 #endif

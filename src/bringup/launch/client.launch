@@ -2,7 +2,7 @@
     <node pkg="client" type="client" respawn="false" name="client" output="screen">
         <param name="ipaddress" type="string" value="39.98.69.65"/>
         <param name="port" type="string" value="8585"/>
-        <param name="path_file" type="string" value="/home/autolabor/catkin_roboway/src/bringup/param/path.json"/>
+        <param name="path_file" type="string" value="$(find bringup)/param/path.json"/>
         <param name="online" type="bool" value="true"/>
     </node>
 </launch>

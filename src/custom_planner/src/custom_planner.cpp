@@ -3,7 +3,7 @@
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
-
+#include <fstream>
 
 //register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(custom_planner::CustomPlanner, nav_core::BaseGlobalPlanner)
@@ -11,130 +11,126 @@ PLUGINLIB_EXPORT_CLASS(custom_planner::CustomPlanner, nav_core::BaseGlobalPlanne
 namespace custom_planner {
 
   CustomPlanner::CustomPlanner()
-  : costmap_ros_(NULL), initialized_(false){}
+  : costmap_ros_(NULL){}
 
   CustomPlanner::CustomPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
-  : costmap_ros_(NULL), initialized_(false){
+  : costmap_ros_(NULL){
     initialize(name, costmap_ros);
   }
   
-  void CustomPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros){
-    if(!initialized_){
-      costmap_ros_ = costmap_ros;
-      costmap_ = costmap_ros_->getCostmap();
+  void CustomPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
+  {
 
-      ros::NodeHandle private_nh("~/" + name);
-      private_nh.param("step_size", step_size_, costmap_->getResolution());
-      private_nh.param("min_dist_from_robot", min_dist_from_robot_, 0.10);
-      world_model_ = new base_local_planner::CostmapModel(*costmap_); 
-
-      initialized_ = true;
+    json path_json;
+    string path_file = "/home/autolabor/catkin_roboway/src/bringup/param/path.jsond";
+    
+    ros::param::get("~path_file", path_file);
+    ROS_INFO_STREAM(path_file);
+    std::ifstream i;
+    i.open(path_file);
+    i >> path_json;
+    int number = path_json["number"];
+    for(int i = 0; i < number; i++)
+    {
+        Pose pose;
+        pose.x = path_json["pose"][i]["x"];
+        pose.y = path_json["pose"][i]["y"];
+        pose.yaw = path_json["pose"][i]["yaw"];
+        pose.type = path_json["pose"][i]["type"];
+        pathVector.push_back(pose);
+        if(pose.type == 0)
+          startPoint = pose;
+        else if(pose.type == 1)
+          endPoint = pose;
     }
-    else
-      ROS_WARN("This planner has already been initialized... doing nothing");
+    ROS_INFO("create a path");
   }
-
-  //we need to take the footprint of the robot into account when we calculate cost to obstacles
-  double CustomPlanner::footprintCost(double x_i, double y_i, double theta_i){
-    if(!initialized_){
-      ROS_ERROR("The planner has not been initialized, please call initialize() to use the planner");
-      return -1.0;
-    }
-
-    std::vector<geometry_msgs::Point> footprint = costmap_ros_->getRobotFootprint();
-    //if we have no footprint... do nothing
-    if(footprint.size() < 3)
-      return -1.0;
-
-    //check if the footprint is legal
-    double footprint_cost = world_model_->footprintCost(x_i, y_i, theta_i, footprint);
-    return footprint_cost;
-  }
-
 
   bool CustomPlanner::makePlan(const geometry_msgs::PoseStamped& start, 
       const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
 
-    if(!initialized_){
-      ROS_ERROR("The planner has not been initialized, please call initialize() to use the planner");
-      return false;
-    }
-
-    ROS_DEBUG("Got a start: %.2f, %.2f, and a goal: %.2f, %.2f", start.pose.position.x, start.pose.position.y, goal.pose.position.x, goal.pose.position.y);
-
+    static int status = 1;  //0去往终点 1去往起点
+    static Pose lastPose;//为了使方向不发生改变，保留经去的最近的一个点
     plan.clear();
-    costmap_ = costmap_ros_->getCostmap();
 
-    if(goal.header.frame_id != costmap_ros_->getGlobalFrameID()){
-      ROS_ERROR("This planner as configured will only accept goals in the %s frame, but a goal was sent in the %s frame.", 
-          costmap_ros_->getGlobalFrameID().c_str(), goal.header.frame_id.c_str());
-      return false;
-    }
-
-    tf::Stamped<tf::Pose> goal_tf;
-    tf::Stamped<tf::Pose> start_tf;
-
-    poseStampedMsgToTF(goal,goal_tf);
-    poseStampedMsgToTF(start,start_tf);
-
-    double useless_pitch, useless_roll, goal_yaw, start_yaw;
-    start_tf.getBasis().getEulerYPR(start_yaw, useless_pitch, useless_roll);
-    goal_tf.getBasis().getEulerYPR(goal_yaw, useless_pitch, useless_roll);
-
-    //we want to step back along the vector created by the robot's position and the goal pose until we find a legal cell
-    double goal_x = goal.pose.position.x;
-    double goal_y = goal.pose.position.y;
-    double start_x = start.pose.position.x;
-    double start_y = start.pose.position.y;
-
-    double diff_x = goal_x - start_x;
-    double diff_y = goal_y - start_y;
-    double diff_yaw = angles::normalize_angle(goal_yaw-start_yaw);
-
-    double target_x = goal_x;
-    double target_y = goal_y;
-    double target_yaw = goal_yaw;
-
-    bool done = false;
-    double scale = 1.0;
-    double dScale = 0.01;
-
-    while(!done)
+    if(goal.pose.position.x == endPoint.x && goal.pose.position.y == endPoint.x)
     {
-      if(scale < 0)
+      if(status == 1)
       {
-        target_x = start_x;
-        target_y = start_y;
-        target_yaw = start_yaw;
-        ROS_WARN("The planner could not find a valid plan for this goal");
-        break;
+        status = 0;
+        for(int i = 1; i < pathVector.size(); i++)
+        {
+          planVector.push_back(pathVector[i]);
+          if(pathVector[i].type == 1)//该点为终点，退出循环
+            break;
+        }
+        lastPose = pathVector[0];
       }
-      target_x = start_x + scale * diff_x;
-      target_y = start_y + scale * diff_y;
-      target_yaw = angles::normalize_angle(start_yaw + scale * diff_yaw);
-      
-      double footprint_cost = footprintCost(target_x, target_y, target_yaw);
-      if(footprint_cost >= 0)
-      {
-          done = true;
-      }
-      scale -=dScale;
     }
 
-    plan.push_back(start);
-    geometry_msgs::PoseStamped new_goal = goal;
-    tf::Quaternion goal_quat = tf::createQuaternionFromYaw(target_yaw);
+    if(goal.pose.position.x == startPoint.x && goal.pose.position.y == startPoint.x)
+    {
+      if(status == 0)
+      {
+        status = 1;
+        //找到终点
+        int endpoint = 0;
+        for(int i = 0; i < pathVector.size(); i++)
+        {
+            if(pathVector[i].type == 1)//如果是终点
+            {
+                endpoint = i;
+                break;
+            }
+        }
+        //创建总路径
+        for(int i = endpoint + 1; i < pathVector.size(); i++)
+        {
+            planVector.push_back(pathVector[i]);
+            if(pathVector[i].type == 0)//该点为起点，退出循环
+                break;
+        }
+        lastPose = pathVector[endpoint];
+        lastPose.yaw = atan2(pathVector[endpoint + 1].y - pathVector[endpoint].y , pathVector[endpoint + 1].x - pathVector[endpoint].x);
+      }
+    }
 
-    new_goal.pose.position.x = target_x;
-    new_goal.pose.position.y = target_y;
+    tf::Stamped<tf::Pose> tf_pose;
+    tf::poseStampedMsgToTF(start, tf_pose);
+    double currentYaw = tf::getYaw(tf_pose.getRotation());
+    ROS_INFO("Got a start: %.2f, %.2f, and a goal: %.2f, %.2f", start.pose.position.x, start.pose.position.y, goal.pose.position.x, goal.pose.position.y);
 
-    new_goal.pose.orientation.x = goal_quat.x();
-    new_goal.pose.orientation.y = goal_quat.y();
-    new_goal.pose.orientation.z = goal_quat.z();
-    new_goal.pose.orientation.w = goal_quat.w();
+    //每经过一个点删除最前的点，更新plan
+    if(planVector[0] != endPoint || planVector[0] != startPoint)
+    {
+      ROS_INFO_STREAM("current yaw: " << currentYaw << " goal yaw: " << planVector[0].yaw);
+      if(std::abs(start.pose.position.x - planVector[0].x) < 1 && std::abs(start.pose.position.y - planVector[0].y) < 1)
+      {
+          lastPose = planVector[0];
+          planVector.erase(planVector.begin());
+      }
+      else
+      {
+        //如果跳过了一个目标（没有检测到与某一个目标距离在0.5m以内），如何处理
+      }
+    }
+ 
+    geometry_msgs::PoseStamped pose_;
+    pose_.pose.position.x = start.pose.position.x;
+    pose_.pose.position.y = start.pose.position.y;
+    pose_.pose.orientation = start.pose.orientation;
+    //pose_.pose.orientation = tf::createQuaternionMsgFromYaw(lastPose.yaw);//需要注意
+    plan.push_back(pose_);
 
-    plan.push_back(new_goal);
-    return (done);
+    for(auto pose : planVector)
+    {
+      pose_.pose.position.x = pose.x;
+      pose_.pose.position.y = pose.y;
+      pose_.pose.orientation = tf::createQuaternionMsgFromYaw(pose.yaw);
+      plan.push_back(pose_);
+    }
+
+    return true;
   }
 
 };

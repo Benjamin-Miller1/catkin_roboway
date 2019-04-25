@@ -73,14 +73,14 @@ private:
     string carId{"000001"};
 
     int getRemainTime();
-    void dealCommond(int type);
     enum status_T
     {START, END, STARTTOEND, ENDTOSTART, STOP, PARKING, PARKINGTOSTART};
     status_T status{PARKING};
 
-    vector<Pose> pathVector;
-    void createPath();
+    Pose startPoint, endPoint;
+    void dealPath();
     int moveSinglePath(vector<Pose> &singlePath);
+    bool moveToGoal(Pose goal);
     MoveBaseClient *ac{nullptr};
 
     tf::StampedTransform base_link_pose;
@@ -158,35 +158,7 @@ void Client::send_reachEndPoint()
     write(sockfd, commondString.c_str(), commondString.size());
     ROS_INFO_STREAM(commond);
 }
-void Client::dealCommond(int type)
-{
-    if(type == 0)//到达start位置
-    {
-        send_reachStartPoint();
-        status = START;
-    }
-    else if(type == 1)//出发
-    {
-        if(status == START || status == STOP)
-        {
-            status = STARTTOEND;
-        }
-    }
-    else if(type == 2) //返回
-    {
-        if(status == END || status == STOP)
-        {
-           status = ENDTOSTART;
-        }
-    }
-    else if(type == 3)//导航停止
-    {
-        if(status == STARTTOEND || status == ENDTOSTART)
-        {
-            status = STOP;
-        }
-    }
-}
+
 void Client::get_pose_callback()
 {   
     tf::TransformListener listener;
@@ -215,11 +187,11 @@ int Client::moveSinglePath(vector<Pose> &singlePath)
 	int goalIndex = 0;
 	while(1 && (status == STARTTOEND || status == ENDTOSTART))
 	{
-        //判断车是否在起点(看车头朝向)  朝向大于90度时需要增加一个位置调整角度
-        double roll, pitch, yaw;
-        tf::Matrix3x3(base_link_pose.getRotation()).getRPY(roll, pitch, yaw);
+        // 判断车是否在起点(看车头朝向)  朝向大于90度时需要增加一个位置调整角度
+        // double roll, pitch, yaw;
+        // tf::Matrix3x3(base_link_pose.getRotation()).getRPY(roll, pitch, yaw);
 
-        double diff_abs = std::abs(yaw - singlePath[goalIndex].yaw);
+        // double diff_abs = std::abs(yaw - singlePath[goalIndex].yaw);
 
         // if((diff_abs > pi/2) && (diff_abs < pi*3/2))
         // {
@@ -300,68 +272,121 @@ int Client::moveSinglePath(vector<Pose> &singlePath)
 	    }
 	}
 }
-
-void Client::navigation()
+bool Client::moveToGoal(Pose pose)
 {
-    status_T status_last;
-    status_T status_current;
-
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.header.stamp = ros::Time::now();
+    goal.target_pose.pose.position.x = pose.x;
+    goal.target_pose.pose.position.y = pose.y;
+    goal.target_pose.pose.orientation = tf::createQuaternionMsgFromYaw(pose.yaw);
+    ROS_INFO("Sending goal  x=%f, y=%f, yaw=%f", pose.x,pose.y, pose.yaw);
     while(1)
     {
+        ac->sendGoal(goal);
+        // Wait for the action to return
+        while(!ac->waitForResult(ros::Duration(1.0)))//一直检测当前的状态
+        {
+            if(status == STOP)
+            {
+                //取消导航
+                ac->cancelGoal();
+                while(status == STOP)
+                {
+                    ros::Duration(1.0).sleep();
+                    ROS_INFO("stopping");
+                }
+            }
+            double yaw = tf::getYaw(base_link_pose.getRotation());
+
+            ROS_INFO_STREAM("running" << "x:" << base_link_pose.getOrigin().x() << " y:" << base_link_pose.getOrigin().y() << " yaw:" << yaw);
+        }
+        if(ac->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        {
+            ROS_INFO("reach the goal");
+            return true;
+        }
+    }
+}
+void Client::navigation()
+{
+    while(1)
+    {   
+        // 多goal行进
+        // if(status == STARTTOEND)
+        // {
+        //     vector<Pose> singlePathVector;
+        //     for(int i = 1; i < pathVector.size(); i++)
+      	// 	{
+      	// 		singlePathVector.push_back(pathVector[i]);
+      	// 		if(pathVector[i].type == 1)//该点为终点，退出循环
+      	// 			break;
+      	// 	}
+            
+ 		// 	//开始行走
+        //     if(moveSinglePath(singlePathVector) == 0)
+        //     {
+        //         ROS_INFO("reach end and change status to end");
+        //         status = END;
+        //         send_reachEndPoint();
+        //     }
+        // }
+
+
+        // if(status == ENDTOSTART)
+        // {
+        // 	vector<Pose> singlePathVector;
+        //     int endpoint = 0;
+        //     for(int i = 0; i < pathVector.size(); i++)
+      	// 	{
+        //         if(pathVector[i].type == 1)//如果是终点
+        //         {
+        //             endpoint = i;
+        //             break;
+        //         }
+      	// 	}
+            
+        //     for(int i = endpoint + 1; i < pathVector.size(); i++)
+        //     {
+        //         singlePathVector.push_back(pathVector[i]);
+        //         if(pathVector[i].type == 0)//该点为起点，退出循环
+        //             break;
+        //     }
+
+ 		// 	//开始行走
+        //     if(moveSinglePath(singlePathVector) == 0)
+        //     {
+        //         ROS_INFO("reach start and change status to start");
+        //         status = START;
+        //         send_reachStartPoint();
+        //     }
+
+        // }
+
+        // 单goal行进
         if(status == STARTTOEND)
         {
-            vector<Pose> singlePathVector;
-            for(int i = 1; i < pathVector.size(); i++)
-      		{
-      			singlePathVector.push_back(pathVector[i]);
-      			if(pathVector[i].type == 1)//该点为终点，退出循环
-      				break;
-      		}
-            
- 			//开始行走
-            if(moveSinglePath(singlePathVector) == 0)
+            if(moveToGoal(endPoint))
             {
-                ROS_INFO("reach end and change status to end");
-                status = END;
-                send_reachEndPoint();
+                 ROS_INFO("reach end and change status to end");
+                 status = END;
+                 send_reachEndPoint();
             }
         }
-
-
         if(status == ENDTOSTART)
         {
-        	vector<Pose> singlePathVector;
-            int endpoint = 0;
-            for(int i = 0; i < pathVector.size(); i++)
-      		{
-                if(pathVector[i].type == 1)//如果是终点
-                {
-                    endpoint = i;
-                    break;
-                }
-      		}
-            
-            for(int i = endpoint + 1; i < pathVector.size(); i++)
-            {
-                singlePathVector.push_back(pathVector[i]);
-                if(pathVector[i].type == 0)//该点为起点，退出循环
-                    break;
-            }
-
- 			//开始行走
-            if(moveSinglePath(singlePathVector) == 0)
+            if(moveToGoal(startPoint))
             {
                 ROS_INFO("reach start and change status to start");
                 status = START;
                 send_reachStartPoint();
             }
-
         }
         ros::Duration(0.1).sleep();
     }
 }
 
-void Client::createPath()
+void Client::dealPath()
 {
     json path_json;
     string path_file;
@@ -377,15 +402,41 @@ void Client::createPath()
         pose.y = path_json["pose"][i]["y"];
         pose.yaw = path_json["pose"][i]["yaw"];
         pose.type = path_json["pose"][i]["type"];
-        pathVector.push_back(pose);
-        ROS_INFO("%f, %f, %f, %d  ", pose.x, pose.y, pose.yaw, pose.type);
+        if(pose.type == 0)
+          startPoint = pose;
+        else if(pose.type == 1)
+          endPoint = pose;
     }
-
 }
 bool Client::commondCallback(client::commond::Request & request, client::commond::Response & response)
 {
     ROS_INFO("here  %d", request.type);
-    dealCommond(request.type);
+    if(request.type == 0)//到达start位置
+    {
+        send_reachStartPoint();
+        status = START;
+    }
+    else if(request.type == 1)//出发
+    {
+        if(status == START || status == STOP)
+        {
+            status = STARTTOEND;
+        }
+    }
+    else if(request.type == 2) //返回
+    {
+        if(status == END || status == STOP)
+        {
+           status = ENDTOSTART;
+        }
+    }
+    else if(request.type == 3)//导航停止
+    {
+        if(status == STARTTOEND || status == ENDTOSTART)
+        {
+            status = STOP;
+        }
+    }
 }
 
 Client::Client()
@@ -500,7 +551,7 @@ void Client::gps_callback(const geometry_msgs::Pose::ConstPtr& msg)
 
 void Client::exec()
 {
-    createPath();
+    dealPath();
 
     ac = new MoveBaseClient("move_base", true);
 

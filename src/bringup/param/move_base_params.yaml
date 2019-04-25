@@ -1,4 +1,4 @@
-base_global_planner: carrot_planner/CarrotPlanner #"test_planner/TestPlanner" #"global_planner/GlobalPlanner" #
+base_global_planner: "custom_planner/CustomPlanner" #"test_planner/TestPlanner" #"global_planner/GlobalPlanner" #carrot_planner/CarrotPlanner
 base_local_planner: "base_local_planner/TrajectoryPlannerROS" #  dwa_local_planner/DWAPlannerROS
 #recovery_behaviors:
 #  - {name: conservative_reset, type: clear_costmap_recovery/ClearCostmapRecovery} 
