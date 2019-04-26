@@ -1,5 +1,6 @@
 一、笔记本终端打开键盘控制：
-    1、执行 nohup rosrun  roboway_tool keyboard_control  </dev/null >/dev/null 2>&1 &
+    1、执行 nohup rosrun  roboway_tool keyboard_control </dev/null >/dev/null 2>&1 &
+       如果是没有数字小键盘的电脑  执行nohup rosrun  roboway_tool keyboard_control_nonumber </dev/null >/dev/null 2>&1 &
 
 二、建图：
     准备：将机器人移动到起点

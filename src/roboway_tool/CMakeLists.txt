@@ -218,3 +218,11 @@ add_dependencies(keyboard_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 target_link_libraries(keyboard_control
   ${catkin_LIBRARIES}
 )
+
+add_executable(keyboard_control_nonumber
+  src/keyboard_control_nonumber.cpp
+)
+add_dependencies(keyboard_control_nonumber ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(keyboard_control_nonumber
+  ${catkin_LIBRARIES}
+)
