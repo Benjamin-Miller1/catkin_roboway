@@ -3,23 +3,23 @@
 
 二、建图：
     准备：将机器人移动到起点
-    1、工控机终端  ssh 192.168.8.100
+    1、工控机终端  ssh autolabor@192.168.8.100
     	1、清除里程计数据  rosservice call /motor_control/commond "commond: 3"
     	2、打开slam进程  roslaunch bringup slam.launch
     2、笔记本终端
-        1、打开路径记录进程  rosrun roboway_tool trace
+        1、打开路径记录进程  rosrun roboway_tool trace xxx  (xxx为地图名称)
         2、打开rviz roslaunch bringup rviz_slam.launch
 
     3、保存地图
         1、ctrl + c 关闭路径记录进程、rviz
-        2、笔记本终端下执行 /home/autolabor/code/catkin_roboway/src/bringup/script/save_map.sh room（room为地图名称）
-        3、关闭slam进程
+        2、笔记本终端下执行 ~/workspace/catkin_roboway/src/bringup/script/save_map.sh room（room为地图名称）
+        3、ctrl + c 关闭slam进程
         4、画路径、地图边界
-        5、将相关文件同步到工控机 
+        5、将相关文件同步到工控机 ~/workspace/catkin_roboway/src/bringup/script/sync_file.sh room（room为地图名称）
 
 三、 导航：
     准备：将机器人移动到起点
-    1、工控机终端  ssh 192.168.8.100
+    1、工控机终端  ssh autolabor@192.168.8.100
 	    1、清除里程计数据  rosservice call /motor_control/commond "commond: 3"
 	    2、打开move_base进程 roslaunch bringup move_base.launch
 	    3、打开client进程 roslaunch bringup client.launch

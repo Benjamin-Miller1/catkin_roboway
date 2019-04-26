@@ -31,8 +31,15 @@ bool isRepeat(vector<Point> &point_vector , const Point &point)
 }
 int main(int argc, char **argv)
 {
+    if(argc < 2)
+    {
+        ROS_INFO("missing parameter of map name");
+        exit(-1);
+    }
     ros::init(argc, argv, "client");
-    ofstream fout("/home/autolabor/code/qt_makePath/trace.dat", ios::binary | ios::trunc);
+    std::stringstream ss;
+    ss << "/home/roboway/workspace/catkin_roboway/src/bringup/map/" << argv[1] << "_trace.dat";
+    ofstream fout(ss.str().c_str(), ios::binary | ios::trunc);
     tf::TransformListener listener;
     tf::StampedTransform base_link_pose;
     vector<Point> point_vector;
