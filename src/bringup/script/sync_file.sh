@@ -5,11 +5,12 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-echo $ROS_PACKAGE_PATH
+source /opt/ros/kinetic/setup.bash
+source ~/workspace/catkin_roboway/devel/setup.bash
 
 roscd bringup/launch
 
-ROMOTEROSDIR="192.168.8.100:/home/autolabor/catkin_roboway/src/bringup"
+ROMOTEROSDIR="autolabor@192.168.8.100:/home/autolabor/catkin_roboway/src/bringup"
 
 scp -q amcl.launch move_base.launch $ROMOTEROSDIR/launch
 
