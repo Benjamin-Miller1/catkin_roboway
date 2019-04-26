@@ -22,10 +22,9 @@ namespace custom_planner {
   {
 
     json path_json;
-    string path_file = "/home/autolabor/catkin_roboway/src/bringup/param/path.jsond";
-    
+    string path_file;
     ros::param::get("~path_file", path_file);
-    ROS_INFO_STREAM(path_file);
+    ROS_INFO_STREAM("path_file: " << path_file);
     std::ifstream i;
     i.open(path_file);
     i >> path_json;
