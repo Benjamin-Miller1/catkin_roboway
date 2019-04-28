@@ -12,7 +12,7 @@ roscd bringup/launch
 
 ROMOTEROSDIR="autolabor@192.168.8.100:/home/autolabor/catkin_roboway/src/bringup"
 
-scp -q amcl.launch move_base.launch $ROMOTEROSDIR/launch
+scp -q amcl.launch move_base.launch client.launch $ROMOTEROSDIR/launch
 
 roscd bringup/map
 scp -q $1.pgm $1.yaml $1_modify.pgm $1_modify.yaml $1_path.json $ROMOTEROSDIR/map
