@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="agent" type="agent" respawn="false" name="agent" output="screen">
+        <param name="path" type="string" value="$(find bringup)/script"/>
+    </node>
+</launch>
