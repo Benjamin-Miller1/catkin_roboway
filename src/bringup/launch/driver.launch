@@ -12,6 +12,11 @@
 
     <node name="gps_node" pkg="serial_interface" type="gps_node"  respawn="true"/>
 
+    <include file="$(find bringup)/launch/key_control.launch">
+        <arg name="name" value="key_control_IPC"/>
+        <arg name="devicename" value="pci-0000:00:14.0-usb-0:3.3:1.0-event-kbd"/>
+    </include>
+    
     <!--include file="$(find bringup)/launch/robot_pose_ekf.launch"/-->
     <include file="$(find bringup)/launch/ultrasound.launch"/>
 </launch>

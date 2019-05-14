@@ -12,6 +12,7 @@
 #include <boost/thread.hpp>
 #include <client/commond.h>
 #include <motor_control/motor_commond.h>
+#include <string>
 
 #define KEYBOARD_UP     76    //5
 #define KEYBOARD_DOWN   80    //2
@@ -224,9 +225,12 @@ bool KeyboardControl::init(){
     return false;
   }
 
+  std::string device_name;
+  ros::param::get("~devicename", device_name);
+
   while ((entry = readdir(dev_dir)) != NULL){
     std::string dir_str = entry->d_name;
-    if (dir_str.find("platform-i8042-serio-0-event-kbd") < dir_str.length()){
+    if (dir_str.find(device_name) < dir_str.length()){
       port_name_ = std::string(path) + "/" + dir_str;
       ROS_INFO_STREAM("INFO: The keyboard port is :" << port_name_);
       break;
