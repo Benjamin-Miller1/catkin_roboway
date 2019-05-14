@@ -1,4 +1,6 @@
 <launch>
-    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch"/>
-    <include file="$(find bringup)/param/slam_gmapping_1.xml"/>
+    <include file="$(find bringup)/launch/VLP16_points.launch" >
+        <arg name="view_width" value="5.5" />
+    </include>
+    <include file="$(find bringup)/param/slam_gmapping.xml"/>
 </launch>
