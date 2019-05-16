@@ -34,7 +34,7 @@ plugins:
   - {name: static_layer,            type: "costmap_2d::StaticLayer"}
   - {name: obstacle_layer,          type: "costmap_2d::ObstacleLayer"}
   - {name: inflation_layer,         type: "costmap_2d::InflationLayer"}
-  - {name: sonar,                   type: "range_sensor_layer::RangeSensorLayer"}
+#  - {name: sonar,                   type: "range_sensor_layer::RangeSensorLayer"}
 # The width of the map in meters.(int, default: 10)
 width: 5.0
 
