@@ -9,214 +9,156 @@
 #include <iostream>
 #include <string.h>
 
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 
-CanDevice::CanDevice(const char* devname):
-    local_socket_(::socket(PF_CAN, SOCK_RAW, CAN_RAW)),
-    interface_name_(devname), timer(io_service)
+bool print_data(const unsigned char *data)
 {
-    if (local_socket_ < 0) {
-        throw std::system_error(errno, std::system_category());
-    }
-    asio::generic::raw_protocol raw_protocol(PF_CAN, CAN_RAW);
-    raw_socket = std::make_shared<asio::generic::raw_protocol::socket>(io_service, raw_protocol);
-    raw_socket->bind(endpoint());
-}
-
-CanDevice::protocol::endpoint CanDevice::endpoint() const
-{
-    struct ifreq ifr;
-
-    std::strncpy(ifr.ifr_name, interface_name_.c_str(), IF_NAMESIZE);
-    ifr.ifr_name[IF_NAMESIZE - 1] = '\0';
-    ioctl(local_socket_, SIOCGIFINDEX, &ifr);
-
-    struct sockaddr_can addr = {0};
-    addr.can_family = AF_CAN;
-    addr.can_ifindex = ifr.ifr_ifindex;
-    return protocol::endpoint(&addr, sizeof(sockaddr_can));
-}
-
-void CanDevice::readCompleted(const boost::system::error_code& error,
-        const size_t bytesTransferred)
-{
-    if(!error)
-    {
-        result=resultSuccess;
-        this->bytesTransferred=bytesTransferred;
-        return;
-    }
-    result=resultError;
-}
-void CanDevice::timeoutExpired(const boost::system::error_code& error)
-{
-     if(!error && result==resultInProgress) result=resultTimeoutExpired;
-}
-void CanDevice::write(const char *data, size_t size)
-{
-    raw_socket->send(asio::buffer(data,size));
-}
-bool CanDevice::read(char *data, size_t size)
-{
-    raw_socket->async_receive(asio::buffer(data, size), boost::bind(
-                &CanDevice::readCompleted,this,asio::placeholders::error,
-                asio::placeholders::bytes_transferred));
-    timer.expires_from_now(boost::posix_time::millisec(100));
-    timer.async_wait(boost::bind(&CanDevice::timeoutExpired,this, asio::placeholders::error));
-
-    result=resultInProgress;
-    bytesTransferred=0;
-    for(;;)
-    {
-        io_service.run_one();
-        switch(result)
-        {
-            case resultSuccess:
-                timer.cancel();
-                return true;
-            case resultTimeoutExpired:
-                //raw_socket->cancel();
-                return false;
-            case resultError:
-                timer.cancel();
-                //raw_socket->cancel();
-                return false;
-        }
-    }
-}
-
-CanDevice::~CanDevice()
-{
-    if (local_socket_ >= 0)
-        ::close(local_socket_);
-}
-
-bool print_can_frame(const struct can_frame * const frame)
-{
-    const unsigned char *data = frame->data;
-    const unsigned int dlc = frame->can_dlc;
-    unsigned int i;
-
-    printf("%03X  [%u] ", frame->can_id, dlc);
-    for (i = 0; i < dlc; ++i)
+    for (int i = 0; i < 8; ++i)
     {
         printf(" %02X", data[i]);
     }
     printf("\r\n");
 }
+void MotorControl::serialWrite(unsigned char *data, size_t size)
+{
+    asio::write(sp, asio::buffer(data, size));
+}
+void MotorControl::readCompleted(const boost::system::error_code& error)
+{
+    if(!error)
+    {
+        result=resultSuccess;
+        return;
+    }
+    result=resultError;
+}
+void MotorControl::timeoutExpired(const boost::system::error_code& error)
+{
+     if(!error && result==resultInProgress) result=resultTimeoutExpired;
+}
+bool MotorControl::serialRead(unsigned char *data, size_t size)
+{
+    asio::async_read(sp, asio::buffer(data, size), 
+    boost::bind(&MotorControl::readCompleted, this, asio::placeholders::error));
+
+    timer.expires_from_now(posix_time::millisec(20));
+
+    timer.async_wait(boost::bind(&MotorControl::timeoutExpired, this, asio::placeholders::error));
+
+    result = resultInProgress;
+    for(;;)
+    {
+        io.run_one();
+        switch(result)
+        {
+            case resultSuccess:
+                timer.cancel();
+
+                return true;
+            case resultTimeoutExpired:
+                sp.cancel();
+                return false;
+            case resultError:
+                return false;
+        }
+    }
+}
 
 bool MotorControl::can_send_enable(unsigned char address)
 {
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_Enable(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    return canDevice.read((char *)&frame, sizeof(struct can_frame));
+    unsigned char data[8];
+    memcpy(data, PRIM_Enable(address), 8);
+    serialWrite(data, sizeof(data));
+    return serialRead(data, sizeof(data));
 }
 bool MotorControl::can_send_disable(unsigned char address)
 {
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_Disable(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    return canDevice.read((char *)&frame, sizeof(struct can_frame));
+    unsigned char data[8];
+    memcpy(data, PRIM_Disable(address), 8);
+    serialWrite(data, sizeof(data));
+    return serialRead(data, sizeof(data));
 }
 
 bool MotorControl::can_send_clear_error(unsigned char address)
 {
     int error_code;
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
+    unsigned char data[8];
 
-    memcpy(frame.data, PRIM_GetError(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    canDevice.read((char *)&frame, sizeof(struct can_frame));
-    PRIM_ExplainError(frame.can_id, frame.data, &error_code);
+    memcpy(data, PRIM_GetError(address), 8);
+    serialWrite(data, sizeof(data));
+    serialRead(data, sizeof(data));
+    PRIM_ExplainError(address, data, &error_code);
 
     if(error_code == 0)
         return true;
     
     can_send_disable(address);
 
-    memcpy(frame.data, PRIM_ClearError(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    canDevice.read((char *)&frame, sizeof(struct can_frame));
+    memcpy(data, PRIM_ClearError(address), 8);
+    serialWrite(data, sizeof(data));
+    serialRead(data, sizeof(data));
 
     can_send_enable(address);
 }
 
 bool MotorControl::can_send_velocity(unsigned char address, int velocity)
 {
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_SetVelocity(address, velocity), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    return canDevice.read((char *)&frame, sizeof(struct can_frame));
+    unsigned char data[8];
+    memcpy(data, PRIM_SetVelocity(address, velocity), 8);
+    serialWrite(data, sizeof(data));
+    return serialRead(data, sizeof(data));
 }
-double MotorControl::can_read_velocity(unsigned char address)
-{
-    double velocity;
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_GetActVelocity(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    canDevice.read((char *)&frame, sizeof(struct can_frame));
-    PRIM_ExplainActVelocity(frame.can_id, frame.data, &velocity);
-    return velocity;
-}
+
 bool MotorControl::can_send_getvelocity(unsigned char address)
 {
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_GetActVelocity(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    if(!canDevice.read((char *)&frame, sizeof(struct can_frame)))
+    unsigned char data[8];
+    memcpy(data, PRIM_GetActVelocity(address), 8);
+    serialWrite(data, sizeof(data));
+    if(!serialRead(data, sizeof(data)))
       return false;
     else
     {
-      handle_feedback((char *)&frame);
+      handle_feedback(data);
       return true;
     }
     
 }
 bool MotorControl::can_send_getposition(unsigned char address)
 {
-    struct can_frame frame;
-    frame.can_id  = address;
-    frame.can_dlc = 8;
-    memcpy(frame.data, PRIM_GetActualPos(address), 8);
-    canDevice.write((char *)&frame, sizeof(struct can_frame));
-    if(!canDevice.read((char *)&frame, sizeof(struct can_frame)))
+    unsigned char data[8];
+    memcpy(data, PRIM_GetActualPos(address), 8);
+    serialWrite(data, sizeof(data));
+    if(!serialRead(data, sizeof(data)))
       return false;
     else
     {
-      handle_feedback((char *)&frame);
+      handle_feedback(data);
       return true;
     }
 }
 
-MotorControl::MotorControl(): canDevice("can0")
+
+MotorControl::MotorControl(): sp(io), timer(io)
 {
     double wheel_length = 0.705;
     control_rate_ = 10;
     ros::NodeHandle nh_("~");
+    int ratio = 1;//减速比
     nh_.param<double>("model_param", model_param_, 0.5);
     nh_.param<double>("wheel", wheel_length, 0.68);
     nh_.param<bool>("output_tf", output_tf, true);
     nh_.param<bool>("is_publish_odom", is_publish_odom, true);
-    round_per_meter = 1 / wheel_length * 30;//电机圈数（30为减速电机）每米    42.55
+    nh_.param<int>("ratio", ratio, 30);
+
+    round_per_meter = 1 / wheel_length * ratio;//电机转动圈数每米
+
     RPM_MAX = 3000;
+
+    sp.open("/dev/motor_serial");
+    sp.set_option(boost::asio::serial_port::baud_rate(115200));
+    sp.set_option(boost::asio::serial_port::flow_control());
+    sp.set_option(boost::asio::serial_port::parity());
+    sp.set_option(boost::asio::serial_port::stop_bits());
+    sp.set_option(boost::asio::serial_port::character_size(8));
 }
 void MotorControl::send_speed_callback()
 {
@@ -228,8 +170,8 @@ void MotorControl::send_speed_callback()
     right_d = (linear_speed + model_param_ * angular_speed);//右轮直线速度 m/s
     
     int left, right;//左右轮的rpm
-    left = static_cast<int>(left_d * round_per_meter * 60 * -1);//左轮设定RPM,右轮反转乘以-1
-    right = static_cast<int>(right_d * round_per_meter * 60);//右轮设定RPM
+    left = static_cast<int>(left_d * round_per_meter * 60);//左轮设定RPM,右轮反转乘以-1
+    right = static_cast<int>(right_d * round_per_meter * 60 * -1);//右轮设定RPM
 
     /*如果某个轮的速度超出最大值RPM_MAX，left与right同比例缩小(ratio),保持转弯半径不变*/
     int current_max_rpm = std::max(std::abs(left), std::abs(right));
@@ -247,33 +189,33 @@ void MotorControl::send_speed_callback()
     //ROS_INFO_STREAM("send -> left: " << left << "; right: " << right);
 }
 
-bool MotorControl::handle_feedback(const char *data)
+bool MotorControl::handle_feedback(unsigned char *data)
 {
-    struct can_frame *frame = (struct can_frame *)data;
 
-    if(frame->can_id > 4)
+    int address = data[0];
+    if(address > 4)
       return false;
 
-    switch (frame->data[1])
+    switch (data[1])
     {
       case 0x05:
-        if(frame->can_id == 1)
+        if(address == 1)
         {
-          PRIM_ExplainActualPos(frame->can_id, frame->data, &position_left_latest);
+          PRIM_ExplainActualPos(address, data, &position_left_latest);
         }
-        else if(frame->can_id == 2)
+        else if(address == 2)
         {
-          PRIM_ExplainActualPos(frame->can_id, frame->data, &position_right_latest);
+          PRIM_ExplainActualPos(address, data, &position_right_latest);
         }
         break;
       case 0x3F:
-        if(frame->can_id == 1)
+        if(address == 1)
         {
-          PRIM_ExplainActVelocity(frame->can_id, frame->data, &velocity_left_latest);
+          PRIM_ExplainActVelocity(address, data, &velocity_left_latest);
         }
-        else if(frame->can_id == 2)
+        else if(address == 2)
         {
-          PRIM_ExplainActVelocity(frame->can_id, frame->data, &velocity_right_latest);
+          PRIM_ExplainActVelocity(address, data, &velocity_right_latest);
         }
         break;
       default:
@@ -345,9 +287,6 @@ void MotorControl::get_odometry_callback(const ros::TimerEvent&)
     {
         publish_odom();
     }
-    //double a1 = can_read_velocity(1);
-    //double 
-    //ROS_INFO_STREAM("1: " <<  << " 2: " << can_read_velocity(2) << " 3: " << can_read_velocity(3) << " 4: " << can_read_velocity(4));
 }
 
 void MotorControl::publish_odom()
@@ -363,16 +302,16 @@ void MotorControl::publish_odom()
     return;
   }
 
-  double delta_left_position = (-1) * (position_left_latest - position_left_handle);
-  double delta_right_position = (position_right_latest - position_right_handle);
+  double delta_left_position = (position_left_latest - position_left_handle);
+  double delta_right_position = (-1) * (position_right_latest - position_right_handle);
   //ROS_INFO_STREAM("receive position -> left: " << position_left_latest << "; right: " << position_right_latest);
   //ROS_INFO_STREAM("receive velocity -> left: " << velocity_left_latest << "; right: " << velocity_right_latest);
 
   position_left_handle = position_left_latest;
   position_right_handle = position_right_latest;
 
-  double left_velocity = velocity_left_latest / (round_per_meter * 60 * -1);//左轮直线速度m/s
-  double right_velocity = velocity_right_latest / (round_per_meter * 60 );//左轮直线速度m/s
+  double left_velocity = velocity_left_latest / (round_per_meter * 60);//左轮直线速度m/s
+  double right_velocity = velocity_right_latest / (round_per_meter * 60 * -1);//左轮直线速度m/s
 
   delta_left_position /= (pulse_per_round * round_per_meter);//左轮前进距离 m
   delta_right_position /= (pulse_per_round * round_per_meter);//右轮前进距离 m
@@ -463,7 +402,7 @@ void MotorControl::exec()
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &MotorControl::twist_callback, this);//处理move_base
     ros::Subscriber cmd_joy_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel_joy", 10, &MotorControl::twist_joy_callback, this);//处理joy
-    ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
+    //ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
     ros::Timer check_motor_timer = node.createTimer(ros::Duration(1.0), &MotorControl::check_motor_callback, this);
     ros::ServiceServer service = node.advertiseService("motor_control/commond", &MotorControl::commondCallback, this);
     ros::spin();
