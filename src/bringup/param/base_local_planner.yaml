@@ -1,7 +1,7 @@
 acc_lim_x: 5
 acc_lim_theta:  10
 
-max_vel_x: 0.7
+max_vel_x: 1.0
 min_vel_x: 0.0
 
 max_vel_theta: 0.3

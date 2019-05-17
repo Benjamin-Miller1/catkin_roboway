@@ -16,39 +16,6 @@ using namespace std;
 using namespace tf2_ros;
 using namespace boost;
 
-class CanDevice
-{
-public:
-    using protocol = boost::asio::generic::raw_protocol;
-
-    CanDevice(const char* devname);
-    CanDevice(const CanDevice&) = delete;
-    CanDevice& operator=(const CanDevice&) = delete;
-    ~CanDevice();
-    
-    void write(const char *data, size_t size);
-    bool read(char *data, size_t size);
-private:
-    enum ReadResult
-    {
-        resultInProgress,
-        resultSuccess,
-        resultError,
-        resultTimeoutExpired
-    };
-
-    int local_socket_;
-    std::string interface_name_;
-    asio::io_service io_service;
-    std::shared_ptr<asio::generic::raw_protocol::socket> raw_socket;
-    asio::deadline_timer timer; ///< Timer for timeout
-    enum ReadResult result;  ///< Used by read with timeout
-    size_t bytesTransferred;
-    protocol::endpoint endpoint() const;
-    void readCompleted(const boost::system::error_code& error, const size_t bytesTransferred);
-    void timeoutExpired(const boost::system::error_code& error);
-};
-
 
 class MotorControl
 {
@@ -61,7 +28,23 @@ public:
 
 protected:
 private:
-  CanDevice canDevice;
+
+  enum ReadResult
+  {
+      resultInProgress,
+      resultSuccess,
+      resultError,
+      resultTimeoutExpired
+  };
+  boost::asio::io_service io;
+	boost::asio::serial_port sp;
+  asio::deadline_timer timer;
+  enum ReadResult result;
+  void serialWrite(unsigned char *data, size_t size);
+  void readCompleted(const boost::system::error_code& error);
+  void timeoutExpired(const boost::system::error_code& error);
+  bool serialRead(unsigned char *data, size_t size);
+
   bool motor_in_control{false};
 	ros::NodeHandle node;
 	ros::Publisher odom_pub_;
@@ -94,7 +77,7 @@ private:
 
   void publish_odom();
   bool canMove_base{true};
-  bool handle_feedback(const char *data);
+  bool handle_feedback(unsigned char *data);
   bool can_send_velocity(unsigned char address, int velocity);
   bool can_send_getvelocity(unsigned char address);
   bool can_send_getposition(unsigned char address);
