@@ -402,7 +402,7 @@ void MotorControl::exec()
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &MotorControl::twist_callback, this);//处理move_base
     ros::Subscriber cmd_joy_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel_joy", 10, &MotorControl::twist_joy_callback, this);//处理joy
-    //ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
+    ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
     ros::Timer check_motor_timer = node.createTimer(ros::Duration(1.0), &MotorControl::check_motor_callback, this);
     ros::ServiceServer service = node.advertiseService("motor_control/commond", &MotorControl::commondCallback, this);
     ros::spin();
