@@ -4,6 +4,8 @@
 #include <tf2/utils.h>
 #include <fstream>
 #include <vector>
+#include <signal.h>
+
 using namespace std;
 
 struct Point;
@@ -29,6 +31,13 @@ bool isRepeat(vector<Point> &point_vector , const Point &point)
     else
         return true;
 }
+
+void MySigintHandler(int sig)
+{
+	//这里主要进行退出前的数据保存、内存清理、告知其他节点等工作
+	ros::shutdown();
+}
+
 int main(int argc, char **argv)
 {
     if(argc < 2)
@@ -36,7 +45,9 @@ int main(int argc, char **argv)
         ROS_INFO("missing parameter of map name");
         exit(-1);
     }
-    ros::init(argc, argv, "client");
+    ros::init(argc, argv, "trace");
+    signal(SIGTERM, MySigintHandler);
+
     std::stringstream ss;
     ss << "/home/roboway/workspace/catkin_roboway/src/bringup/map/" << argv[1] << "_trace.dat";
     ofstream fout(ss.str().c_str(), ios::binary | ios::trunc);
