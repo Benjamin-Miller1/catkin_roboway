@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(agent)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -197,6 +197,11 @@ include_directories(
 # catkin_add_nosetests(test)
 
 
+find_package(Qt5  REQUIRED COMPONENTS Core)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 add_executable(agent
   src/agent.cpp
 )
@@ -204,3 +209,5 @@ add_dependencies(agent ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TAR
 target_link_libraries(agent
   ${catkin_LIBRARIES}
 )
+
+target_link_libraries(agent Qt5::Core)

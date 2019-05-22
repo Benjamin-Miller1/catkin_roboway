@@ -2,7 +2,7 @@
     <include file="$(find bringup)/launch/amcl.launch"/>
      <env name="ROSCONSOLE_CONFIG_FILE" value="$(find bringup)/launch/rosconsole.config"/>
     <!-- 加载导航地图 -->
-    <node pkg="map_server" type="map_server" name="show_map_server" args="$(find bringup)/map/maptest_modify.yaml">
+    <node pkg="map_server" type="map_server" name="show_map_server" args="$(find bringup)/map/aaa_modify.yaml">
 	    <remap from="/map" to="/show_map" />
     </node>
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
@@ -12,7 +12,7 @@
         <rosparam file="$(find bringup)/param/global_planner_params.yaml" command="load" ns="GlobalPlanner"/>
         <rosparam file="$(find bringup)/param/dwa_local_planner_params.yaml" command="load" ns="DWAPlannerROS"/>
         <rosparam file="$(find bringup)/param/base_local_planner.yaml" command="load" ns="TrajectoryPlannerROS"/>
-        <param name="path_file" type="string" value="$(find bringup)/map/maptest_path.json"/>
+        <param name="path_file" type="string" value="$(find bringup)/map/aaa_path.json"/>
     </node>
 
 </launch>

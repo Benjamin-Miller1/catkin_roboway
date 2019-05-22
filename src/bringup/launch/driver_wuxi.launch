@@ -11,4 +11,6 @@
         <param name="ratio" type="int" value="35"/>
     </node>
 
+    <include file="$(find bringup)/launch/agent.launch"/>
+    
 </launch>
