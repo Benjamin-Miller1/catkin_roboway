@@ -7,9 +7,9 @@
 #include <vector>
 #include <chrono>
 #include <std_msgs/UInt8.h>
-#include <mutex>
 #include <boost/asio.hpp>
 #include <motor_control/motor_commond.h>
+#include <motor_control/paramConfig.h>
 #include <memory>
 using namespace ros;
 using namespace std;
@@ -54,7 +54,6 @@ private:
 
   int position_left_handle, position_right_handle;//倒数第二次记录的数据实际处理的数据
 
-	int control_rate_;
   int RPM_MAX;
 	double model_param_;//理论上是左右两轮的间距
   bool output_tf;
@@ -65,16 +64,14 @@ private:
   double accumulation_x_{0}, accumulation_y_{0}, accumulation_th_{0};
   geometry_msgs::TransformStamped transformStamped_;
   tf2_ros::TransformBroadcaster br_;
-
   nav_msgs::Odometry odom_;
-  mutex g_lock;
-  
+
 	geometry_msgs::Twist current_twist_;
 	void send_speed_callback();
   void get_odometry_callback(const ros::TimerEvent&);
   void check_motor_callback(const ros::TimerEvent&);
   bool commondCallback(motor_control::motor_commond::Request & request, motor_control::motor_commond::Response & response);
-
+  void dynamic_callback(motor_control::paramConfig &config, uint32_t level);
   void publish_odom();
   bool canMove_base{true};
   bool handle_feedback(unsigned char *data);

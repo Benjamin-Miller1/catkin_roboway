@@ -1,6 +1,7 @@
 #include "motor_control/motor_driver.h"
 #include "motor_control/motor_control.h"
 #include <tf2_ros/transform_broadcaster.h>
+#include <dynamic_reconfigure/server.h>
 
 #include <thread>
 #include <numeric>
@@ -8,7 +9,6 @@
 #include <boost/bind.hpp>
 #include <iostream>
 #include <string.h>
-
 
 bool print_data(const unsigned char *data)
 {
@@ -136,23 +136,8 @@ bool MotorControl::can_send_getposition(unsigned char address)
     }
 }
 
-
 MotorControl::MotorControl(): sp(io), timer(io)
 {
-    double wheel_length = 0.705;
-    control_rate_ = 10;
-    ros::NodeHandle nh_("~");
-    int ratio = 1;//减速比
-    nh_.param<double>("model_param", model_param_, 0.5);
-    nh_.param<double>("wheel", wheel_length, 0.68);
-    nh_.param<bool>("output_tf", output_tf, true);
-    nh_.param<bool>("is_publish_odom", is_publish_odom, true);
-    nh_.param<int>("ratio", ratio, 30);
-
-    round_per_meter = 1 / wheel_length * ratio;//电机转动圈数每米
-
-    RPM_MAX = 3000;
-
     sp.open("/dev/motor_serial");
     sp.set_option(boost::asio::serial_port::baud_rate(115200));
     sp.set_option(boost::asio::serial_port::flow_control());
@@ -397,12 +382,37 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
     }
     return true;
 }
+
+void MotorControl::dynamic_callback(motor_control::paramConfig &config, uint32_t level)
+{
+	ROS_INFO("Reconfigure Request: %f", config.model_param_);
+    model_param_ = config.model_param_;
+}
+
 void MotorControl::exec()
 {
+    double wheel_length = 0.705;
+    ros::NodeHandle nh_("~");
+
+    dynamic_reconfigure::Server<motor_control::paramConfig> server;
+	dynamic_reconfigure::Server<motor_control::paramConfig>::CallbackType f
+             = boost::bind(&MotorControl::dynamic_callback, this, _1, _2);
+	server.setCallback(f);
+
+    int ratio = 1;//减速比
+    nh_.param<double>("model_param", model_param_, 0.5);
+    nh_.param<double>("wheel", wheel_length, 0.68);
+    nh_.param<bool>("output_tf", output_tf, true);
+    nh_.param<bool>("is_publish_odom", is_publish_odom, true);
+    nh_.param<int>("ratio", ratio, 30);
+    round_per_meter = 1 / wheel_length * ratio;//电机转动圈数每米
+
+    RPM_MAX = 3000;
+
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &MotorControl::twist_callback, this);//处理move_base
     ros::Subscriber cmd_joy_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel_joy", 10, &MotorControl::twist_joy_callback, this);//处理joy
-    ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/control_rate_), &MotorControl::get_odometry_callback, this);
+    ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/10), &MotorControl::get_odometry_callback, this);
     ros::Timer check_motor_timer = node.createTimer(ros::Duration(1.0), &MotorControl::check_motor_callback, this);
     ros::ServiceServer service = node.advertiseService("motor_control/commond", &MotorControl::commondCallback, this);
     ros::spin();
