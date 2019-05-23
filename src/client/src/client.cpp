@@ -70,7 +70,7 @@ private:
     string endPoint_latitude;
     string realTimePoint_longitude;
     string realTimePoint_latitude;
-    string carId{"000001"};
+    string carId;
 
     int getRemainTime();
     void dealCommond(int type);
@@ -393,6 +393,7 @@ Client::Client()
     ros::param::get("~ipaddress", serveraddrstr);
     ros::param::get("~port", serverportstr);
     ros::param::get("~online", isSendMsgToServer);
+    ros::param::get("~carId", carId);
 
     realTimePoint_longitude = "";
     realTimePoint_latitude = "";
@@ -506,8 +507,10 @@ void Client::exec()
 
     ac->waitForServer();
     init_socket();
-    char startCode[] = "$@@@@000001$";
-    write(sockfd, startCode, strlen(startCode));
+
+    string startCode = "$@@@@" + carId + "$";
+    const char* startCode_ = startCode.c_str();
+    write(sockfd, startCode_, strlen(startCode_));
 
     std::thread receive_thread(&Client::readCommond, this);
     receive_thread.detach();
