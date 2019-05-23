@@ -55,7 +55,9 @@ private:
   int position_left_handle, position_right_handle;//倒数第二次记录的数据实际处理的数据
 
   int RPM_MAX;
-	double model_param_;//理论上是左右两轮的间距
+  double wheel_length;
+  int ratio;//减速比
+	double model_param;//理论上是左右两轮的间距
   bool output_tf;
   bool is_publish_odom;
   double round_per_meter;

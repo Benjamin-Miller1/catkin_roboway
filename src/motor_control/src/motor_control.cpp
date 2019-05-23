@@ -151,8 +151,8 @@ void MotorControl::send_speed_callback()
     double linear_speed = current_twist_.linear.x;//小车的直线速度 m/s
     double angular_speed = current_twist_.angular.z;//小车的角速度 rad/s
 
-    left_d = (linear_speed - model_param_ * angular_speed);//左轮直线速度 m/s
-    right_d = (linear_speed + model_param_ * angular_speed);//右轮直线速度 m/s
+    left_d = (linear_speed - model_param * angular_speed);//左轮直线速度 m/s
+    right_d = (linear_speed + model_param * angular_speed);//右轮直线速度 m/s
     
     int left, right;//左右轮的rpm
     left = static_cast<int>(left_d * round_per_meter * 60);//左轮设定RPM,右轮反转乘以-1
@@ -303,12 +303,12 @@ void MotorControl::publish_odom()
 
   //ROS_INFO_STREAM("delta position -> left: " << delta_left_position << "; right: " << delta_right_position);
 
-  double delta_theta = (delta_right_position - delta_left_position)/ ( model_param_ * 2);
+  double delta_theta = (delta_right_position - delta_left_position)/ ( model_param * 2);
 
   double delta_dis = (delta_right_position + delta_left_position) / 2.0;
 
   double v_dis = (right_velocity + left_velocity) / 2;
-  double v_theta = (right_velocity - left_velocity)/ model_param_;
+  double v_theta = (right_velocity - left_velocity)/ model_param;
 
   double delta_x = cos(delta_theta) * delta_dis;
   double delta_y = -sin(delta_theta) * delta_dis;
@@ -385,13 +385,14 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
 
 void MotorControl::dynamic_callback(motor_control::paramConfig &config, uint32_t level)
 {
-	ROS_INFO("Reconfigure Request: %f", config.model_param_);
-    model_param_ = config.model_param_;
+	ROS_INFO("Reconfigure Request: %f", config.model_param);
+    model_param = config.model_param;
+    wheel_length = config.wheel;
+    round_per_meter = 1 / wheel_length * ratio;
 }
 
 void MotorControl::exec()
 {
-    double wheel_length = 0.705;
     ros::NodeHandle nh_("~");
 
     dynamic_reconfigure::Server<motor_control::paramConfig> server;
@@ -399,9 +400,8 @@ void MotorControl::exec()
              = boost::bind(&MotorControl::dynamic_callback, this, _1, _2);
 	server.setCallback(f);
 
-    int ratio = 1;//减速比
-    nh_.param<double>("model_param", model_param_, 0.5);
-    nh_.param<double>("wheel", wheel_length, 0.68);
+    nh_.param<double>("model_param", model_param, 0.5);//越小转得越快
+    nh_.param<double>("wheel", wheel_length, 0.68);//越小走得越远
     nh_.param<bool>("output_tf", output_tf, true);
     nh_.param<bool>("is_publish_odom", is_publish_odom, true);
     nh_.param<int>("ratio", ratio, 30);
