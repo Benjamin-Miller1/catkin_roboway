@@ -385,7 +385,8 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
 
 void MotorControl::dynamic_callback(motor_control::paramConfig &config, uint32_t level)
 {
-	ROS_INFO("Reconfigure Request: %f", config.model_param);
+	ROS_INFO("Reconfigure Request: model_param: %f  wheel_length: %f ",
+                     config.model_param, config.wheel);
     model_param = config.model_param;
     wheel_length = config.wheel;
     round_per_meter = 1 / wheel_length * ratio;
