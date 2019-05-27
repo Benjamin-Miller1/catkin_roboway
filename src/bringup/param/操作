@@ -1,7 +1,10 @@
 一、笔记本终端打开键盘控制：
     1、执行 nohup rosrun  roboway_tool keyboard_control </dev/null >/dev/null 2>&1 &
-       如果是没有数字小键盘的电脑  执行nohup rosrun  roboway_tool keyboard_control_nonumber </dev/null >/dev/null 2>&1 &
+       如果是没有数字小键盘的电脑  执行nohup roslaunch bringup key_control.launch </dev/null >/dev/null 2>&1 &
 
+见图前先调参,保证直行与自转无误差:
+rosrun dynamic_reconfigure dynparam set motor_control model_param 0.5
+rosrun dynamic_reconfigure dynparam set motor_control wheel 0.68
 二、建图：
     准备：将机器人移动到起点
     1、工控机终端  ssh autolabor@192.168.8.100
