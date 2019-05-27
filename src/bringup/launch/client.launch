@@ -4,5 +4,6 @@
         <param name="port" type="string" value="8585"/>
         <param name="path_file" type="string" value="$(find bringup)/map/aaa_path.json"/>
         <param name="online" type="bool" value="true"/>
+        <param name="carId" type="string" value="000002"/>
     </node>
 </launch>
