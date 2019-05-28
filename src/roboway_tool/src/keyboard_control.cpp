@@ -113,21 +113,62 @@ void KeyboardControl::buttonScaleCheck(int value, double &scale, double step, do
 }
 
 void KeyboardControl::parseKeyboard(){
+  static bool upPressEvent = false;
+  static bool downPressEvent = false;
+  static bool leftPressEvent = false;
+  static bool rightPressEvent = false;
+
   while (true) {
     read(fd_, &ev_, sizeof(struct input_event));
     if (ev_.type == EV_KEY){
       //ROS_INFO_STREAM("INFO: [key]: " << ev_.code << ", [value]: " << ev_.value);
       switch (ev_.code) {
       case KEYBOARD_UP:
+        if(ev_.value == 1)
+          upPressEvent = true;
+        else if(ev_.value == 0)
+        {
+          if(upPressEvent)
+            upPressEvent = false;
+          else
+            break;
+        }
         buttonTwistCheck(ev_.value, linear_state_, 1, -1);
         break;
       case KEYBOARD_DOWN:
+        if(ev_.value == 1)
+          downPressEvent = true;
+        else if(ev_.value == 0)
+        {
+          if(downPressEvent)
+            downPressEvent = false;
+          else
+            break;
+        }
         buttonTwistCheck(ev_.value, linear_state_, -1, 1);
         break;
       case KEYBOARD_LEFT:
+        if(ev_.value == 1)
+          leftPressEvent = true;
+        else if(ev_.value == 0)
+        {
+          if(leftPressEvent)
+            leftPressEvent = false;
+          else
+            break;
+        }
         buttonTwistCheck(ev_.value, angular_state_, 1, -1);
         break;
       case KEYBOARD_RIGHT:
+        if(ev_.value == 1)
+          rightPressEvent = true;
+        else if(ev_.value == 0)
+        {
+          if(rightPressEvent)
+            rightPressEvent = false;
+          else
+            break;
+        }
         buttonTwistCheck(ev_.value, angular_state_, -1, 1);
         break;
       case LINEAR_INC:
