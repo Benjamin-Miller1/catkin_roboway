@@ -48,7 +48,6 @@ private:
   bool motor_in_control{false};
 	ros::NodeHandle node;
 	ros::Publisher odom_pub_;
-  bool is_motor_on{false};
   double velocity_left_latest, velocity_right_latest; //最近一次所更新的数据
   int position_left_latest, position_right_latest;
 
@@ -70,8 +69,8 @@ private:
 
 	geometry_msgs::Twist current_twist_;
 	void send_speed_callback();
+  void send_speed_callback(const ros::TimerEvent&);
   void get_odometry_callback(const ros::TimerEvent&);
-  void check_motor_callback(const ros::TimerEvent&);
   bool commondCallback(motor_control::motor_commond::Request & request, motor_control::motor_commond::Response & response);
   void dynamic_callback(motor_control::paramConfig &config, uint32_t level);
   void publish_odom();

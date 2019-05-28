@@ -56,9 +56,11 @@ bool MotorControl::serialRead(unsigned char *data, size_t size)
                 return true;
             case resultTimeoutExpired:
                 sp.cancel();
-                return false;
+                ROS_INFO_STREAM("timeout");
+                return true;
             case resultError:
-                return false;
+                ROS_INFO_STREAM("error");
+                return true;
         }
     }
 }
@@ -167,9 +169,10 @@ void MotorControl::send_speed_callback()
       right = right * ratio;
     }
 
-    if(!is_motor_on)
-      return;
-    is_motor_on = can_send_velocity(1, left) && can_send_velocity(3, left) && can_send_velocity(2, right) && can_send_velocity(4, right);
+    can_send_velocity(5, left);
+    can_send_velocity(3, left);
+    can_send_velocity(2, right);
+    can_send_velocity(4, right);
 
     //ROS_INFO_STREAM("send -> left: " << left << "; right: " << right);
 }
@@ -178,13 +181,13 @@ bool MotorControl::handle_feedback(unsigned char *data)
 {
 
     int address = data[0];
-    if(address > 4)
+    if(address > 5)
       return false;
 
     switch (data[1])
     {
       case 0x05:
-        if(address == 1)
+        if(address == 5)
         {
           PRIM_ExplainActualPos(address, data, &position_left_latest);
         }
@@ -194,7 +197,7 @@ bool MotorControl::handle_feedback(unsigned char *data)
         }
         break;
       case 0x3F:
-        if(address == 1)
+        if(address == 5)
         {
           PRIM_ExplainActVelocity(address, data, &velocity_left_latest);
         }
@@ -211,14 +214,12 @@ bool MotorControl::handle_feedback(unsigned char *data)
 
 void MotorControl::twist_callback(const geometry_msgs::Twist::ConstPtr& msg)
 {
+    current_twist_ = *msg.get();
     if(!canMove_base)
     {
       current_twist_.linear.x = 0;
       current_twist_.angular.z = 0;
-      return;
     }
-
-    current_twist_ = *msg.get();
     //限制move_base的原地旋转速度
     if((std::abs(current_twist_.linear.x) < 0.05) && (std::abs(current_twist_.angular.z) > 0.2))
     {
@@ -233,45 +234,18 @@ void MotorControl::twist_joy_callback(const geometry_msgs::Twist::ConstPtr& msg)
     send_speed_callback();
     //ROS_INFO_STREAM("receive /cmd_vel_joy msg.  v: " << current_twist_.linear.x << "w: " << current_twist_.angular.z);
 }
-
-void MotorControl::check_motor_callback(const ros::TimerEvent&)
+void MotorControl::send_speed_callback(const ros::TimerEvent&)
 {
-    if(!is_motor_on)
-    {
-      if(!can_send_enable(1))
-      {
-          ROS_INFO_STREAM("is_motor_on1: " << is_motor_on);
-          return;
-      }
-      if(!can_send_enable(2))
-      {
-          ROS_INFO_STREAM("is_motor_on2: " << is_motor_on);
-          return;
-      }
-      if(!can_send_enable(3))
-      {
-          ROS_INFO_STREAM("is_motor_on3: " << is_motor_on);
-          return;
-      }
-      if(!can_send_enable(4))
-      {
-          ROS_INFO_STREAM("is_motor_on4: " << is_motor_on);
-          return;
-      }
-    }
-    is_motor_on = true;
-    //ROS_INFO_STREAM("is_motor_on: " << is_motor_on);
+    send_speed_callback();
 }
 void MotorControl::get_odometry_callback(const ros::TimerEvent&)
 {
-    if(!is_motor_on)
-      return;
-    is_motor_on = can_send_getvelocity(1) && can_send_getposition(1) && can_send_getvelocity(2) && can_send_getposition(2);
+    can_send_getvelocity(5);
+    can_send_getposition(5);
+    can_send_getvelocity(2);
+    can_send_getposition(2);
 
-    if(is_motor_on)
-    {
-        publish_odom();
-    }
+    publish_odom();
 }
 
 void MotorControl::publish_odom()
@@ -367,7 +341,7 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
             canMove_base = 1;
             break;
         case 2 : //清除故障
-            can_send_clear_error(1);
+            can_send_clear_error(5);
             can_send_clear_error(2);
             can_send_clear_error(3);
             can_send_clear_error(4);
@@ -410,11 +384,17 @@ void MotorControl::exec()
 
     RPM_MAX = 3000;
 
+    can_send_enable(5);
+    can_send_enable(2);
+    can_send_enable(3);
+    can_send_enable(4);
+
+
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &MotorControl::twist_callback, this);//处理move_base
     ros::Subscriber cmd_joy_sub = node.subscribe<geometry_msgs::Twist>("/cmd_vel_joy", 10, &MotorControl::twist_joy_callback, this);//处理joy
     ros::Timer get_odometry_timer = node.createTimer(ros::Duration(1.0/10), &MotorControl::get_odometry_callback, this);
-    ros::Timer check_motor_timer = node.createTimer(ros::Duration(1.0), &MotorControl::check_motor_callback, this);
+    ros::Timer send_speed_timer = node.createTimer(ros::Duration(1.0/10), &MotorControl::send_speed_callback, this);
     ros::ServiceServer service = node.advertiseService("motor_control/commond", &MotorControl::commondCallback, this);
     ros::spin();
 }

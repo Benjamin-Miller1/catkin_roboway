@@ -425,10 +425,9 @@ void Client::init_socket()
 void Client::readCommond()
 {
     char buf[1024] = {0};
-    size_t size;
+    int size;
     while((size = read(sockfd, buf, sizeof(buf))) > 0)
     {
-
         try{
             json commond = json::parse(buf);
             ROS_INFO_STREAM(commond);
