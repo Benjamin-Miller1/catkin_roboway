@@ -214,12 +214,13 @@ bool MotorControl::handle_feedback(unsigned char *data)
 
 void MotorControl::twist_callback(const geometry_msgs::Twist::ConstPtr& msg)
 {
-    current_twist_ = *msg.get();
     if(!canMove_base)
     {
-      current_twist_.linear.x = 0;
-      current_twist_.angular.z = 0;
+        return;
     }
+    
+    current_twist_ = *msg.get();
+
     //限制move_base的原地旋转速度
     if((std::abs(current_twist_.linear.x) < 0.05) && (std::abs(current_twist_.angular.z) > 0.2))
     {
