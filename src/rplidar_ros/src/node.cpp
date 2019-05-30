@@ -106,47 +106,25 @@ static int scan_count = 0;
         scan_msg.ranges[i] = std::numeric_limits<float>::infinity(); 
     } 
 
+    int degree_90_count = node_count / 4 - node_count *15 / 360;
+    int degree_180_count = node_count / 2;
+    int degree_270_count = node_count / 4 * 3;
+
     //将数据分别对应设置进去 
    for (size_t i = 0; i < node_count; i++)
     {
         float read_value = (float) nodes[i].dist_mm_q2/4.0f/1000; 
         
         int start = node_count / 4;
-        // int end = node_count / 4.0 * 3;
-        // if(i < end && i > start)
-        // {
-            if(i < start)
-                continue;
-            if (read_value == 0.0) 
-                scan_msg.ranges[node_count - i - 1] = std::numeric_limits<float>::infinity(); 
-            else 
-               scan_msg.ranges[node_count - i - 1] = read_value;
-            scan_msg.intensities[node_count - i - 1] = (float) (nodes[i].quality >> 2); 
-        // }
-        // if (i < right_degrees)
-        // { 
-        //    if (read_value == 0.0) 
-        //        scan_msg.ranges[2*degree_90 - i] = std::numeric_limits<float>::infinity(); 
-        //    else 
-        //        scan_msg.ranges[2*degree_90 - i] = read_value; 
 
-        //    scan_msg.intensities[2*degree_90 - i] = (float) (nodes[i].quality >> 2); 
-
-        // } 
-        // else if (i > left_degrees) 
-        // { 
-        //    if (read_value == 0.0) 
-        // scan_msg.ranges[2*degree_270 - i] = std::numeric_limits<float>::infinity(); 
-        //    else 
-        //         scan_msg.ranges[2*degree_270 - i] = read_value; 
-
-        //    scan_msg.intensities[2*degree_270 - i] = (float) (nodes[i].quality >> 2); 
-        // } 
-        // else 
-        // { 
-        //    //do nothing; 
-        // } 
-    } 
+        if(i > degree_90_count && i < degree_270_count)
+            continue;
+        if (read_value == 0.0) 
+            scan_msg.ranges[node_count - i - 1] = std::numeric_limits<float>::infinity(); 
+        else 
+            scan_msg.ranges[node_count - i - 1] = read_value;
+        scan_msg.intensities[node_count - i - 1] = (float) (nodes[i].quality >> 2);
+    }
     //发布出去 
     pub->publish(scan_msg);
 }

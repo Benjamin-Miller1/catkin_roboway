@@ -1,5 +1,8 @@
 <launch>
-    <include file="$(find bringup)/launch/urdf.launch"/>
+    <include file="$(find bringup)/launch/urdf.launch">
+        <arg name="file" value="robot_wuxi.xacro" />
+    </include>
+
     <arg name="output_tf" default="true" />
     <arg name="is_publish_odom" default="true" />
 

@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<robot name="roboway" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <material name="white">
+      <color rgba="1 1 1 1"/>
+  </material>
+  <material name="black">
+      <color rgba="0 0 0 1"/>
+  </material>
+  <material name="blue">
+      <color rgba="0 0 1 1"/>
+  </material>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="1.0 0.7 0.6" />
+      </geometry>
+      <origin xyz="0 0 0.3"/>
+      <material name="white"/>
+    </visual>
+  </link>
+
+  <link name="velodyne">
+    <visual>
+      <geometry>
+        <cylinder length="0.05" radius="0.05" />
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
+  <joint name="velodyne_link_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="velodyne" />
+    <origin xyz="0 0 0.65" />
+  </joint>
+
+  <link name="laser">
+    <visual>
+      <geometry>
+        <cylinder length="0.05" radius="0.05" />
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
+  <joint name="laser_link_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="laser" />
+    <origin xyz="0.45 0 0.1" rpy="0 3.1415 0" />
+  </joint>
+
+  <xacro:macro name="ultrasound" params="number *origin">
+    <link name="ultrasound${number}">
+      <visual>
+        <geometry>
+          <box size="0.01 0.04 0.01" />
+        </geometry>
+        <material name="black"/>
+      </visual>
+    </link>
+
+    <joint name="ultrasound${number}_link_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="ultrasound${number}" />
+      <xacro:insert_block name="origin" />
+    </joint>
+  </xacro:macro>
+
+  <xacro:ultrasound number="0">
+      <origin xyz="0.5 0.2 0.25" rpy="1.5707 0 0"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="1">
+      <origin xyz="0.5 0 0.25" rpy="1.5707 0 0"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="2">
+      <origin xyz="0.5 -0.2 0.25" rpy="1.5707 0 0"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="3">
+      <origin xyz="0.35 -0.35 0.25" rpy="0 0 -1.5707"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="4">
+      <origin xyz="0.2 -0.35 0.25" rpy="0 0 -1.5707"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="5">
+      <origin xyz="-0.5 -0.2 0.25" rpy="0 0 3.1415"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="6">
+      <origin xyz="-0.5 0 0.25" rpy="0 0 3.1415"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="7">
+      <origin xyz="-0.5 0.2 0.25" rpy="0 0 3.1415"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="8">
+      <origin xyz="0.2 0.35 0.25" rpy="0 0 1.5707"/>
+  </xacro:ultrasound>
+
+  <xacro:ultrasound number="9">
+      <origin xyz="0.35 0.35 0.25" rpy="0 0 1.5707"/>
+  </xacro:ultrasound>
+
+</robot>
