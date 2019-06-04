@@ -10,7 +10,7 @@ source ~/workspace/catkin_roboway/devel/setup.bash
 
 roscd bringup/launch
 
-ROMOTEROSDIR="autolabor@192.168.8.100:/home/autolabor/catkin_roboway/src/bringup"
+ROMOTEROSDIR="192.168.8.100:/home/roboway/catkin_roboway/src/bringup"
 
 scp -q amcl.launch move_base.launch client.launch $ROMOTEROSDIR/launch
 
