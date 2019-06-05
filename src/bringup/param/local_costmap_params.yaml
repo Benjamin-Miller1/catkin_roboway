@@ -31,7 +31,7 @@ always_send_full_costmap: false
 
 # Sequence of plugin specifications, one per layer. Each specification is a dictionary with name and type fields. The name is used to define the parameter namespace for the plugin.
 plugins:
-  - {name: static_layer,            type: "costmap_2d::StaticLayer"}
+#  - {name: static_layer,            type: "costmap_2d::StaticLayer"}
   - {name: obstacle_layer,          type: "costmap_2d::ObstacleLayer"}
   - {name: inflation_layer,         type: "costmap_2d::InflationLayer"}
 #  - {name: sonar,                   type: "range_sensor_layer::RangeSensorLayer"}
