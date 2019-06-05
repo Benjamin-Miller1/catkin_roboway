@@ -1,5 +1,5 @@
 <launch>
     <node pkg="serial_interface" type="ultrasound_node" name="ultrasound_node">
-        <param name="config_file" type="str" value="/home/autolabor/catkin_roboway/src/bringup/param/ultrasound.json"/>
+        <param name="config_file" type="str" value="/home/roboway/catkin_roboway/src/bringup/param/ultrasound.json"/>
     </node>
 </launch>
