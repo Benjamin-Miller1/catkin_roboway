@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(roboway_tool)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -216,13 +216,5 @@ add_executable(keyboard_control
 )
 add_dependencies(keyboard_control ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(keyboard_control
-  ${catkin_LIBRARIES}
-)
-
-add_executable(keyboard_control_nonumber
-  src/keyboard_control_nonumber.cpp
-)
-add_dependencies(keyboard_control_nonumber ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(keyboard_control_nonumber
   ${catkin_LIBRARIES}
 )

@@ -1,25 +1,49 @@
 <launch>
-    <include file="$(find bringup)/launch/urdf.launch"/>
     <arg name="output_tf" default="true" />
     <arg name="is_publish_odom" default="true" />
+    <arg name="fourwheels" default="true" />
 
-    <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
-        <param name="model_param" type="double" value="0.5"/>
-        <param name="wheel" type="double" value="0.68"/>
-        <param name="output_tf" type="bool" value="$(arg output_tf)" />
-        <param name="is_publish_odom" type="bool" value="$(arg is_publish_odom)" />
-        <param name="ratio" type="int" value="30"/>
-    </node>
+    <include file="$(find bringup)/launch/urdf.launch"/>
 
-    <node name="gps_node" pkg="serial_interface" type="gps_node"  respawn="true"/>
+    <group if="$(arg fourwheels)">
+        <include file="$(find bringup)/launch/key_control.launch">
+            <arg name="name" value="key_control_IPC"/>
+            <arg name="devicename" value="pci-0000:00:14.0-usb-0:3.3:1.0-event-kbd"/>
+        </include>
 
-    <include file="$(find bringup)/launch/key_control.launch">
-        <arg name="name" value="key_control_IPC"/>
-        <arg name="devicename" value="pci-0000:00:14.0-usb-0:3.3:1.0-event-kbd"/>
-    </include>
-    
+        <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
+            <param name="model_param" type="double" value="0.5"/>
+            <param name="wheel" type="double" value="0.68"/>
+            <param name="output_tf" type="bool" value="$(arg output_tf)" />
+            <param name="is_publish_odom" type="bool" value="$(arg is_publish_odom)" />
+            <param name="ratio" type="int" value="30"/>
+            <param name="wheelcount" type="int" value="4" />
+        </node>
+
+        <node name="gps_node" pkg="serial_interface" type="gps_node"  respawn="true"/>
+
+        <!--include file="$(find bringup)/launch/robot_pose_ekf.launch"/-->
+        
+        <include file="$(find bringup)/launch/ultrasound.launch"/>
+    </group>
+
+    <group unless="$(arg fourwheels)">
+        <include file="$(find bringup)/launch/key_control.launch">
+            <arg name="name" value="key_control_IPC"/>
+            <arg name="devicename" value="pci-0000:00:14.0-usb-0:6:1.0-event-kbd"/>
+            <arg name="linear_max" value="1.8"/>
+        </include>
+
+        <node pkg="motor_control" type="motor_control" name="motor_control" output="screen">
+            <param name="model_param" type="double" value="0.25"/>
+            <param name="wheel" type="double" value="0.78"/>
+            <param name="output_tf" type="bool" value="$(arg output_tf)" />
+            <param name="is_publish_odom" type="bool" value="$(arg is_publish_odom)" />
+            <param name="ratio" type="int" value="20"/>
+            <param name="wheelcount" type="int" value="2" />
+        </node>
+
+    </group>
+
     <include file="$(find bringup)/launch/agent.launch"/>
-
-    <!--include file="$(find bringup)/launch/robot_pose_ekf.launch"/-->
-    <include file="$(find bringup)/launch/ultrasound.launch"/>
 </launch>

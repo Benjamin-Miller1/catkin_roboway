@@ -18,50 +18,20 @@ bool print_data(const unsigned char *data)
     }
     printf("\r\n");
 }
+
 void MotorControl::serialWrite(unsigned char *data, size_t size)
 {
-    asio::write(sp, asio::buffer(data, size));
-}
-void MotorControl::readCompleted(const boost::system::error_code& error)
-{
-    if(!error)
-    {
-        result=resultSuccess;
-        return;
-    }
-    result=resultError;
-}
-void MotorControl::timeoutExpired(const boost::system::error_code& error)
-{
-     if(!error && result==resultInProgress) result=resultTimeoutExpired;
+    ros_ser.write(data, size);
 }
 bool MotorControl::serialRead(unsigned char *data, size_t size)
 {
-    asio::async_read(sp, asio::buffer(data, size), 
-    boost::bind(&MotorControl::readCompleted, this, asio::placeholders::error));
-
-    timer.expires_from_now(posix_time::millisec(20));
-
-    timer.async_wait(boost::bind(&MotorControl::timeoutExpired, this, asio::placeholders::error));
-
-    result = resultInProgress;
-    for(;;)
+    size_t size_result = ros_ser.read(data, size);
+    if(size_result == size)
+        return true;
+    else
     {
-        io.run_one();
-        switch(result)
-        {
-            case resultSuccess:
-                timer.cancel();
-
-                return true;
-            case resultTimeoutExpired:
-                sp.cancel();
-                ROS_INFO_STREAM("timeout");
-                return true;
-            case resultError:
-                ROS_INFO_STREAM("error");
-                return true;
-        }
+        ROS_INFO_STREAM("serial read timeout.");
+        return false;
     }
 }
 
@@ -138,14 +108,18 @@ bool MotorControl::can_send_getposition(unsigned char address)
     }
 }
 
-MotorControl::MotorControl(): sp(io), timer(io)
+MotorControl::MotorControl()
 {
-    sp.open("/dev/motor_serial");
-    sp.set_option(boost::asio::serial_port::baud_rate(115200));
-    sp.set_option(boost::asio::serial_port::flow_control());
-    sp.set_option(boost::asio::serial_port::parity());
-    sp.set_option(boost::asio::serial_port::stop_bits());
-    sp.set_option(boost::asio::serial_port::character_size(8));
+    try {
+        ros_ser.setPort("/dev/motor_serial");
+        ros_ser.setBaudrate(115200);
+        serial::Timeout to = serial::Timeout::simpleTimeout(30);
+        ros_ser.setTimeout(to);
+        ros_ser.open();
+    } catch (serial::IOException &e) {
+        ROS_ERROR_STREAM("Unable to open port.");
+        exit(-1);
+    }
 }
 void MotorControl::send_speed_callback()
 {
@@ -170,9 +144,11 @@ void MotorControl::send_speed_callback()
     }
 
     can_send_velocity(5, left);
-    can_send_velocity(3, left);
+    if(wheelcount == 4)
+        can_send_velocity(3, left);
     can_send_velocity(2, right);
-    can_send_velocity(4, right);
+    if(wheelcount == 4)
+        can_send_velocity(4, right);
 
     //ROS_INFO_STREAM("send -> left: " << left << "; right: " << right);
 }
@@ -344,8 +320,10 @@ bool MotorControl::commondCallback(motor_control::motor_commond::Request & reque
         case 2 : //清除故障
             can_send_clear_error(5);
             can_send_clear_error(2);
-            can_send_clear_error(3);
-            can_send_clear_error(4);
+            if(wheelcount == 4) {
+                can_send_clear_error(3);
+                can_send_clear_error(4);
+            }
             break;
         case 3 : //odom清零
             accumulation_th_ = 0;
@@ -381,14 +359,18 @@ void MotorControl::exec()
     nh_.param<bool>("output_tf", output_tf, true);
     nh_.param<bool>("is_publish_odom", is_publish_odom, true);
     nh_.param<int>("ratio", ratio, 30);
+    nh_.param<int>("wheelcount", wheelcount, 4);
+    
     round_per_meter = 1 / wheel_length * ratio;//电机转动圈数每米
 
     RPM_MAX = 3000;
 
     can_send_enable(5);
     can_send_enable(2);
-    can_send_enable(3);
-    can_send_enable(4);
+    if(wheelcount == 4) {
+        can_send_enable(3);
+        can_send_enable(4);
+    }
 
 
     odom_pub_ = node.advertise<nav_msgs::Odometry>("/odom", 10);

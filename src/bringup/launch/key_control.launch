@@ -2,16 +2,12 @@
     <arg name="name" default="key_control_PC"/>
     <arg name="devicename" default="platform-i8042-serio-0-event-kbd"/>
     <arg name="numberKey" default="false"/>
+    <arg name="linear_max" default="1.8" />
 
-    <group if="$(arg numberKey)">
-        <node name="$(arg name)" pkg="roboway_tool" type="keyboard_control">
-            <param name="devicename" type="str" value="$(arg devicename)"/>
-        </node>
-    </group>
+    <node name="$(arg name)" pkg="roboway_tool" type="keyboard_control">
+        <param name="devicename" type="str" value="$(arg devicename)"/>
+        <param name="linear_max" type="double" value="$(arg linear_max)" />
+        <param name="numberKey" type="bool" value="$(arg numberKey)"/>
+    </node>
 
-    <group unless="$(arg numberKey)">
-        <node name="$(arg name)" pkg="roboway_tool" type="keyboard_control_nonumber">
-            <param name="devicename" type="str" value="$(arg devicename)"/>
-        </node>
-    </group>
 </launch>

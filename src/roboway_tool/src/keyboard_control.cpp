@@ -14,24 +14,6 @@
 #include <motor_control/motor_commond.h>
 #include <string>
 
-#define KEYBOARD_UP     76    //5
-#define KEYBOARD_DOWN   80    //2
-#define KEYBOARD_LEFT   79    //1
-#define KEYBOARD_RIGHT  81    //3
-
-#define LINEAR_INC      71    //7
-#define LINEAR_DEC      75    //4
-#define ANGULAR_INC     73    //9
-#define ANGULAR_DEC     77    //6
-#define STOP            72   //8
-
-#define REACH           55   //KEY_KPASTERISK
-#define START           98   //KEY_KPSLASH
-#define BACK            74   //KEY_KPMINUS
-
-#define CAN_MOVEBASE   78   //KEY_KPPLUS
-#define CLEAR_ERROR    96   //KEY_KPENTER
-
 namespace autolabor_tool {
 class KeyboardControl
 {
@@ -51,7 +33,7 @@ private:
   struct input_event ev_;
 
   int linear_state_, angular_state_;
-
+  bool numberKey;
   std::string port_name_;
   double rate_;
   double linear_scale_, angular_scale_;
@@ -118,12 +100,64 @@ void KeyboardControl::parseKeyboard(){
   static bool leftPressEvent = false;
   static bool rightPressEvent = false;
 
+  unsigned int KEYBOARD_UP;
+  unsigned int KEYBOARD_DOWN;
+  unsigned int KEYBOARD_LEFT;
+  unsigned int KEYBOARD_RIGHT;
+  unsigned int LINEAR_INC;
+  unsigned int LINEAR_DEC;
+  unsigned int ANGULAR_INC;
+  unsigned int ANGULAR_DEC;
+  unsigned int STOP;
+  unsigned int RUN;
+  unsigned int REACH;
+  unsigned int START;
+  unsigned int BACK;
+  unsigned int CAN_MOVEBASE;
+  unsigned int CLEAR_ERROR;
+  if(numberKey)
+  {
+    KEYBOARD_UP = KEY_KP5;
+    KEYBOARD_DOWN = KEY_KP2;
+    KEYBOARD_LEFT = KEY_KP1;
+    KEYBOARD_RIGHT = KEY_KP3;
+    LINEAR_INC = KEY_KP7;
+    LINEAR_DEC = KEY_KP4;
+    ANGULAR_INC = KEY_KP9;
+    ANGULAR_DEC = KEY_KP6;
+    STOP = KEY_KP0;
+    RUN = KEY_KP8;
+    REACH = KEY_KPSLASH;
+    START = KEY_KPASTERISK;
+    BACK = KEY_KPMINUS;
+    CAN_MOVEBASE = KEY_KPPLUS;
+    CLEAR_ERROR = KEY_KPENTER;
+  }
+  else
+  {
+    KEYBOARD_UP = KEY_U;
+    KEYBOARD_DOWN = KEY_J;
+    KEYBOARD_LEFT = KEY_H;
+    KEYBOARD_RIGHT = KEY_K;
+    LINEAR_INC = KEY_6;
+    LINEAR_DEC = KEY_Y;
+    ANGULAR_INC = KEY_8;
+    ANGULAR_DEC = KEY_I;
+    STOP = KEY_F9;
+    RUN = KEY_F8;
+    REACH = KEY_9;
+    START = KEY_0;
+    BACK = KEY_MINUS;
+    CAN_MOVEBASE = KEY_BACKSPACE;
+    CLEAR_ERROR = KEY_ENTER;
+  }
+
   while (true) {
     read(fd_, &ev_, sizeof(struct input_event));
     if (ev_.type == EV_KEY){
-      //ROS_INFO_STREAM("INFO: [key]: " << ev_.code << ", [value]: " << ev_.value);
-      switch (ev_.code) {
-      case KEYBOARD_UP:
+      ROS_INFO_STREAM("INFO: [key]: " << ev_.code << ", [value]: " << ev_.value);
+
+      if (ev_.code == KEYBOARD_UP) {
         if(ev_.value == 1)
           upPressEvent = true;
         else if(ev_.value == 0)
@@ -131,11 +165,11 @@ void KeyboardControl::parseKeyboard(){
           if(upPressEvent)
             upPressEvent = false;
           else
-            break;
+            continue;
         }
         buttonTwistCheck(ev_.value, linear_state_, 1, -1);
-        break;
-      case KEYBOARD_DOWN:
+      }
+      else if(ev_.code == KEYBOARD_DOWN) {
         if(ev_.value == 1)
           downPressEvent = true;
         else if(ev_.value == 0)
@@ -143,11 +177,11 @@ void KeyboardControl::parseKeyboard(){
           if(downPressEvent)
             downPressEvent = false;
           else
-            break;
+            continue;
         }
         buttonTwistCheck(ev_.value, linear_state_, -1, 1);
-        break;
-      case KEYBOARD_LEFT:
+      }
+      else if(ev_.code == KEYBOARD_LEFT) {
         if(ev_.value == 1)
           leftPressEvent = true;
         else if(ev_.value == 0)
@@ -155,11 +189,11 @@ void KeyboardControl::parseKeyboard(){
           if(leftPressEvent)
             leftPressEvent = false;
           else
-            break;
+            continue;
         }
         buttonTwistCheck(ev_.value, angular_state_, 1, -1);
-        break;
-      case KEYBOARD_RIGHT:
+      }
+      else if(ev_.code == KEYBOARD_RIGHT) {
         if(ev_.value == 1)
           rightPressEvent = true;
         else if(ev_.value == 0)
@@ -167,67 +201,67 @@ void KeyboardControl::parseKeyboard(){
           if(rightPressEvent)
             rightPressEvent = false;
           else
-            break;
+            continue;
         }
         buttonTwistCheck(ev_.value, angular_state_, -1, 1);
-        break;
-      case LINEAR_INC:
+      }
+      else if(ev_.code == LINEAR_INC)
         buttonScaleCheck(ev_.value, linear_scale_, linear_step_, linear_max_);
-        break;
-      case LINEAR_DEC:
+      else if(ev_.code == LINEAR_DEC)
         buttonScaleCheck(ev_.value, linear_scale_, -linear_step_, linear_min_);
-        break;
-      case ANGULAR_INC:
+      else if(ev_.code == ANGULAR_INC)
         buttonScaleCheck(ev_.value, angular_scale_, angular_step_, angular_max_);
-        break;
-      case ANGULAR_DEC:
+      else if(ev_.code == ANGULAR_DEC)
         buttonScaleCheck(ev_.value, angular_scale_, -angular_step_, angular_min_);
-        break;
-      case STOP:
+      else if(ev_.code == STOP) {
         if (ev_.value == 1){
-          send_flag_ = !send_flag_;
+          send_flag_ = false;
         }
-        break;
-      case REACH:
+      }
+      else if(ev_.code == RUN) {
         if (ev_.value == 1){
+          send_flag_ = true;
+        }
+      }
+      else if(ev_.code == REACH) {
+        if (ev_.value == 1 && send_flag_ == true){
             client::commond srv;
             srv.request.type = 0;
             client.call(srv);
         }
-        break;  
-      case START:
-        if (ev_.value == 1){
+      }
+      else if(ev_.code == START) {
+        if (ev_.value == 1 && send_flag_ == true){
             client::commond srv;
             srv.request.type = 1;
             client.call(srv);
         }
-        break;
-      case BACK:
-        if (ev_.value == 1){
+      }
+      else if(ev_.code == BACK) {
+        if (ev_.value == 1 && send_flag_ == true){
             client::commond srv;
             srv.request.type = 2;
             client.call(srv);
         }
-        break;
-      case CAN_MOVEBASE:
-        if (ev_.value == 1){
+      }
+      else if(ev_.code == CAN_MOVEBASE) {
+        if (ev_.value == 1 && send_flag_ == true){
             static bool can_move_base = true;
             can_move_base = !can_move_base;
             motor_control::motor_commond srv;
             srv.request.commond = can_move_base;
             motor_control_client.call(srv);
         }
-        break;
-      case CLEAR_ERROR:
-        if (ev_.value == 1){
+      }
+      else if(ev_.code == CLEAR_ERROR) {
+        if (ev_.value == 1 && send_flag_ == true){
           motor_control::motor_commond srv;
           srv.request.commond = 2;
           motor_control_client.call(srv);
         }
-        break;
-      default:
-        continue;
       }
+      else
+        continue;
       publishCmdVel();
     }
   }
@@ -248,12 +282,12 @@ void KeyboardControl::publishCmdVel()
         return;
       twist_pub_.publish(twist);
       twist_prev = twist;
-      ROS_DEBUG_STREAM("linear: " << twist.linear.x << " angular: " << twist.angular.z);
+      ROS_INFO_STREAM("linear: " << twist.linear.x << " angular: " << twist.angular.z);
     }
     else{
       twist_pub_.publish(twist);
       twist_prev = twist;
-      ROS_DEBUG_STREAM("linear: " << 0 << " angular: " << 0);
+      ROS_INFO_STREAM("linear: " << 0 << " angular: " << 0);
     }
 }
 
@@ -268,7 +302,8 @@ bool KeyboardControl::init(){
 
   std::string device_name;
   ros::param::get("~devicename", device_name);
-
+  ros::param::get("~numberKey", numberKey);
+  
   while ((entry = readdir(dev_dir)) != NULL){
     std::string dir_str = entry->d_name;
     if (dir_str.find(device_name) < dir_str.length()){

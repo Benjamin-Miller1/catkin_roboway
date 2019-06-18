@@ -7,15 +7,15 @@
 #include <vector>
 #include <chrono>
 #include <std_msgs/UInt8.h>
-#include <boost/asio.hpp>
 #include <motor_control/motor_commond.h>
 #include <motor_control/paramConfig.h>
 #include <memory>
+
+#include <serial/serial.h>
+
 using namespace ros;
 using namespace std;
 using namespace tf2_ros;
-using namespace boost;
-
 
 class MotorControl
 {
@@ -28,21 +28,8 @@ public:
 
 protected:
 private:
-
-  enum ReadResult
-  {
-      resultInProgress,
-      resultSuccess,
-      resultError,
-      resultTimeoutExpired
-  };
-  boost::asio::io_service io;
-	boost::asio::serial_port sp;
-  asio::deadline_timer timer;
-  enum ReadResult result;
+  serial::Serial ros_ser;
   void serialWrite(unsigned char *data, size_t size);
-  void readCompleted(const boost::system::error_code& error);
-  void timeoutExpired(const boost::system::error_code& error);
   bool serialRead(unsigned char *data, size_t size);
 
   bool motor_in_control{false};
@@ -59,6 +46,7 @@ private:
 	double model_param;//理论上是左右两轮的间距
   bool output_tf;
   bool is_publish_odom;
+  int wheelcount;
   double round_per_meter;
   const double pulse_per_round = 10000;//pulse per round
   std::string odom_frame_{"odom"}, base_frame_{"base_link"};
