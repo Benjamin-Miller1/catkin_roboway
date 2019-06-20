@@ -3,9 +3,9 @@
     <arg name="is_publish_odom" default="true" />
     <arg name="fourwheels" default="true" />
 
-    <include file="$(find bringup)/launch/urdf.launch"/>
-
     <group if="$(arg fourwheels)">
+        <include file="$(find bringup)/launch/urdf.launch"/>
+
         <include file="$(find bringup)/launch/key_control.launch">
             <arg name="name" value="key_control_IPC"/>
             <arg name="devicename" value="pci-0000:00:14.0-usb-0:3.3:1.0-event-kbd"/>
@@ -28,6 +28,11 @@
     </group>
 
     <group unless="$(arg fourwheels)">
+
+        <include file="$(find bringup)/launch/urdf.launch">
+            <arg name="file" value="robot_twowheel.xacro" />
+        </include>
+        
         <include file="$(find bringup)/launch/key_control.launch">
             <arg name="name" value="key_control_IPC"/>
             <arg name="devicename" value="pci-0000:00:14.0-usb-0:6:1.0-event-kbd"/>

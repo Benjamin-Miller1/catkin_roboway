@@ -143,10 +143,12 @@ void MotorControl::send_speed_callback()
       right = right * ratio;
     }
 
-    can_send_velocity(5, left);
+    if(!can_send_velocity(5, left))
+        can_send_velocity(5, left);
     if(wheelcount == 4)
         can_send_velocity(3, left);
-    can_send_velocity(2, right);
+    if(!can_send_velocity(2, right))
+        can_send_velocity(2, right);
     if(wheelcount == 4)
         can_send_velocity(4, right);
 
@@ -217,10 +219,14 @@ void MotorControl::send_speed_callback(const ros::TimerEvent&)
 }
 void MotorControl::get_odometry_callback(const ros::TimerEvent&)
 {
-    can_send_getvelocity(5);
-    can_send_getposition(5);
-    can_send_getvelocity(2);
-    can_send_getposition(2);
+    if(!can_send_getvelocity(5))
+        can_send_getvelocity(5);
+    if(!can_send_getposition(5))
+        can_send_getposition(5);
+    if(!can_send_getvelocity(2))
+        can_send_getvelocity(2);
+    if(!can_send_getposition(2))
+        can_send_getposition(2);
 
     publish_odom();
 }

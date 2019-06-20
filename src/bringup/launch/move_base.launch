@@ -15,6 +15,6 @@
         <param name="path_file" type="string" value="$(find bringup)/map/map_path.json"/>
     </node>
     
-    <include file="$(find bringup)/launch/lms1xx.launch"/>
+    <!--include file="$(find bringup)/launch/lms1xx.launch"/-->
 
 </launch>

@@ -8,7 +8,7 @@ robot_base_frame: base_link
 
 # distance a circular robot should be clear of the obstacle (kobuki: 0.18)
 #robot_radius: 0.20  
-footprint: [[0.50, 0.4], [0.50, -0.4], [-0.50, -0.4], [-0.50, 0.4]]  # if the robot is not circular
+footprint: [[0.15, 0.3], [0.15, -0.3], [-0.65, -0.3], [-0.65, 0.3]]  # if the robot is not circular
 
 # used for obstacle_layer, 3D->voxel 2D->other
 map_type: costmap
