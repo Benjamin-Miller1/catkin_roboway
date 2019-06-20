@@ -10,7 +10,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
-#include <client/commond.h>
+#include <agent/commond.h>
 #include <motor_control/motor_commond.h>
 #include <string>
 
@@ -26,7 +26,7 @@ private:
   ros::NodeHandle nh_;
   ros::Timer twist_pub_timer_;
   ros::Publisher twist_pub_;
-  ros::ServiceClient client;
+  ros::ServiceClient agent_client;
   ros::ServiceClient motor_control_client;
 
   int fd_;
@@ -225,23 +225,26 @@ void KeyboardControl::parseKeyboard(){
       }
       else if(ev_.code == REACH) {
         if (ev_.value == 1 && send_flag_ == true){
-            client::commond srv;
-            srv.request.type = 0;
-            client.call(srv);
+            agent::commond srv;
+            srv.request.type = 1;
+            srv.request.value = 0;
+            agent_client.call(srv);
         }
       }
       else if(ev_.code == START) {
         if (ev_.value == 1 && send_flag_ == true){
-            client::commond srv;
+            agent::commond srv;
             srv.request.type = 1;
-            client.call(srv);
+            srv.request.value = 1;
+            agent_client.call(srv);
         }
       }
       else if(ev_.code == BACK) {
         if (ev_.value == 1 && send_flag_ == true){
-            client::commond srv;
-            srv.request.type = 2;
-            client.call(srv);
+            agent::commond srv;
+            srv.request.type = 1;
+            srv.request.value = 2;
+            agent_client.call(srv);
         }
       }
       else if(ev_.code == CAN_MOVEBASE) {
@@ -332,7 +335,7 @@ void KeyboardControl::run(){
   if (init()){
 
     twist_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel_joy", 10);
-    client = nh_.serviceClient<client::commond>("/commond");
+    agent_client = nh_.serviceClient<agent::commond>("agent/commond");
     motor_control_client = nh_.serviceClient<motor_control::motor_commond>("motor_control/commond");
     boost::thread parse_thread(boost::bind(&KeyboardControl::parseKeyboard, this));
     ros::spin();

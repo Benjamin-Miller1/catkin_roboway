@@ -1,3 +1,4 @@
 int32 type
+int32 value
 ---
-int32 returntype
+int32 returnValue

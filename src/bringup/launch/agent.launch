@@ -1,3 +1,10 @@
 <launch>
-    <node pkg="agent" type="agent" respawn="false" name="agent" output="screen" />
+    <arg name="carId" default="000001" />
+
+    <node pkg="agent" type="agent" respawn="false" name="agent" output="screen">
+        <param name="carId" type="string" value="$(arg carId)"/>
+        <param name="isSendMsgToServer" type="bool" value="true"/>
+        <param name="ipaddress" type="string" value="39.98.69.65"/>
+        <param name="port" type="string" value="8585"/>
+    </node>
 </launch>
