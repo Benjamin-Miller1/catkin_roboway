@@ -40,16 +40,16 @@ void MySigintHandler(int sig)
 
 int main(int argc, char **argv)
 {
-    if(argc < 2)
+    if(argc < 3)
     {
-        ROS_INFO("missing parameter of map name");
+        ROS_INFO("missing parameter of carId and map name");
         exit(-1);
     }
     ros::init(argc, argv, "trace");
     signal(SIGTERM, MySigintHandler);
 
     std::stringstream ss;
-    ss << "/home/roboway/workspace/catkin_roboway/src/bringup/map/" << argv[1] << "_trace.dat";
+    ss << "/home/roboway/workspace/catkin_roboway/src/bringup/map/" << argv[1] << "/" << argv[2] << "_trace.dat";
     ofstream fout(ss.str().c_str(), ios::binary | ios::trunc);
     tf::TransformListener listener;
     tf::StampedTransform base_link_pose;

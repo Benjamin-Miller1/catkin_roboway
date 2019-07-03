@@ -1,6 +1,6 @@
 #!/bin/bash
-if [ $# -lt 1 ]; then
-    echo "error.. need a name for map file"
+if [ $# -lt 2 ]; then
+    echo "error.. need name of carID and map"
     exit 1
 fi
 
@@ -8,11 +8,9 @@ source /opt/ros/kinetic/setup.bash
 source ~/workspace/catkin_roboway/devel/setup.bash
 
 roscd bringup/map
-rosrun map_server map_saver -f $1
-cp $1.pgm $1_modify.pgm
-cp $1.yaml $1_modify.yaml
-sed -i s/$1.pgm/$1_modify.pgm/ $1_modify.yaml
-
-roscd bringup/script
-python modify_launch.py $1
-
+mkdir -p $1
+cd $1
+rosrun map_server map_saver -f $2
+cp $2.pgm $2_modify.pgm
+cp $2.yaml $2_modify.yaml
+sed -i s/$2.pgm/$2_modify.pgm/ $2_modify.yaml

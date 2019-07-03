@@ -1,4 +1,6 @@
 int32 type
 int32 value
+string mapName
 ---
 int32 returnValue
+string returnString

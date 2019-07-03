@@ -44,7 +44,7 @@ public:
 private:
     enum status_T
     {START, END, STARTTOEND, ENDTOSTART, STOP, PARKING, PARKINGTOSTART};
-    status_T status{START};//启动了导航业务意味着在起点
+    status_T status{STARTTOEND};//启动了导航业务就立刻前往终点
     ros::ServiceClient agent_client;
 
     vector<Pose> pathVector;
@@ -223,6 +223,7 @@ void Client::createPath()
     json path_json;
     string path_file;
     ros::param::get("~path_file", path_file);
+    path_file = "/home/roboway/catkin_roboway/src/bringup/map/000001/1_path.json";
     std::ifstream i;
     i.open(path_file);
     i >> path_json;
@@ -243,6 +244,7 @@ bool Client::commondCallback(client::commond::Request & request, client::commond
 {
     ROS_INFO("client receive commond %d", request.value);
     status = static_cast<status_T>(request.value);
+    return true;
 }
 
 Client::Client()
@@ -257,16 +259,14 @@ void Client::exec()
 
     ac->waitForServer();
 
-    std::thread navigation_thread(&Client::navigation, this);
-    navigation_thread.detach();
-
     std::thread pose_thread(&Client::get_pose_callback, this);
     pose_thread.detach();
 
+    std::thread navigation_thread(&Client::navigation, this);
+    navigation_thread.detach();
+
     ros::ServiceServer service = node.advertiseService("client/commond", &Client::commondCallback, this);
     agent_client = node.serviceClient<agent::commond>("agent/commond");
-
-    IPC_reachStartPoint();
 
     ros::spin();
 }

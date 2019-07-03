@@ -110,7 +110,6 @@ void KeyboardControl::parseKeyboard(){
   unsigned int ANGULAR_DEC;
   unsigned int STOP;
   unsigned int RUN;
-  unsigned int REACH;
   unsigned int START;
   unsigned int BACK;
   unsigned int CAN_MOVEBASE;
@@ -125,9 +124,8 @@ void KeyboardControl::parseKeyboard(){
     LINEAR_DEC = KEY_KP4;
     ANGULAR_INC = KEY_KP9;
     ANGULAR_DEC = KEY_KP6;
-    STOP = KEY_KP0;
+    STOP = KEY_KPSLASH;
     RUN = KEY_KP8;
-    REACH = KEY_KPSLASH;
     START = KEY_KPASTERISK;
     BACK = KEY_KPMINUS;
     CAN_MOVEBASE = KEY_KPPLUS;
@@ -145,9 +143,8 @@ void KeyboardControl::parseKeyboard(){
     ANGULAR_DEC = KEY_I;
     STOP = KEY_F9;
     RUN = KEY_F8;
-    REACH = KEY_9;
-    START = KEY_0;
-    BACK = KEY_MINUS;
+    START = KEY_9;
+    BACK = KEY_0;
     CAN_MOVEBASE = KEY_BACKSPACE;
     CLEAR_ERROR = KEY_ENTER;
   }
@@ -221,14 +218,6 @@ void KeyboardControl::parseKeyboard(){
       else if(ev_.code == RUN) {
         if (ev_.value == 1){
           send_flag_ = true;
-        }
-      }
-      else if(ev_.code == REACH) {
-        if (ev_.value == 1 && send_flag_ == true){
-            agent::commond srv;
-            srv.request.type = 1;
-            srv.request.value = 0;
-            agent_client.call(srv);
         }
       }
       else if(ev_.code == START) {
