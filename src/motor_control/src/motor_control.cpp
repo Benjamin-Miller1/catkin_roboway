@@ -200,9 +200,9 @@ void MotorControl::twist_callback(const geometry_msgs::Twist::ConstPtr& msg)
     current_twist_ = *msg.get();
 
     //限制move_base的原地旋转速度
-    if((std::abs(current_twist_.linear.x) < 0.05) && (std::abs(current_twist_.angular.z) > 0.2))
+    if((std::abs(current_twist_.linear.x) < 0.05) && (std::abs(current_twist_.angular.z) > 0.4))
     {
-        current_twist_.angular.z = current_twist_.angular.z > 0 ? 0.2 : -0.2;
+        current_twist_.angular.z = current_twist_.angular.z > 0 ? 0.4 : -0.4;
     }
     send_speed_callback();
     //ROS_INFO_STREAM("receive /cmd_vel msg.  v: " << current_twist_.linear.x << "w: " << current_twist_.angular.z);

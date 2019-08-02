@@ -35,7 +35,7 @@
         
         <include file="$(find bringup)/launch/key_control.launch">
             <arg name="name" value="key_control_IPC"/>
-            <arg name="devicename" value="pci-0000:00:14.0-usb-0:6:1.0-event-kbd"/>
+            <arg name="devicename" value="event-kbd"/>
             <arg name="linear_max" value="1.8"/>
         </include>
 
@@ -47,6 +47,8 @@
             <param name="ratio" type="int" value="20"/>
             <param name="wheelcount" type="int" value="2" />
         </node>
+
+        <node pkg="serial_interface" type="ultrasound2_node" name="ultrasound2_node" />
 
     </group>
 

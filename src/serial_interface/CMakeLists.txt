@@ -39,6 +39,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   std_msgs
   sensor_msgs
+  serial
 )
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
 ##     catkin_package(CATKIN_DEPENDS ...)
@@ -222,5 +223,13 @@ add_executable(test_node
 )
 add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_node
+  ${catkin_LIBRARIES}
+)
+
+add_executable(ultrasound2_node
+  src/ultrasound2_node.cpp
+)
+add_dependencies(ultrasound2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ultrasound2_node
   ${catkin_LIBRARIES}
 )

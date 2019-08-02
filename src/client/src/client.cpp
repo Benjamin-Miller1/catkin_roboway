@@ -52,6 +52,7 @@ private:
     int moveSinglePath(vector<Pose> &singlePath);
     void IPC_reachEndPoint();
     void IPC_reachStartPoint();
+    void RPC_sendRemainingTime(int remainTimeInMin);
     void navigation();
     MoveBaseClient *ac{nullptr};
 
@@ -119,12 +120,12 @@ int Client::moveSinglePath(vector<Pose> &singlePath)
                                       + (base_link_pose.getOrigin().y() - singlePath[goalIndex].y) * (base_link_pose.getOrigin().y() - singlePath[goalIndex].y));
                 for(int goalPoint = goalIndex; goalPoint < singlePath.size() - 1; goalPoint++)
                 {
-                    remainDistance += std::sqrt((singlePath[goalIndex + 1].x - singlePath[goalIndex].x) * (singlePath[goalIndex + 1].x - singlePath[goalIndex].x)
-                                      + (singlePath[goalIndex + 1].y - singlePath[goalIndex].y) * (singlePath[goalIndex + 1].y - singlePath[goalIndex].y));
+                    remainDistance += std::sqrt((singlePath[goalPoint + 1].x - singlePath[goalPoint].x) * (singlePath[goalPoint + 1].x - singlePath[goalPoint].x)
+                                      + (singlePath[goalPoint + 1].y - singlePath[goalPoint].y) * (singlePath[goalPoint + 1].y - singlePath[goalPoint].y));
                 }
                 double remainTimeInMin = remainDistance / 0.5 / 60;
 
-                ROS_INFO_STREAM("running" << "x:" << base_link_pose.getOrigin().x() << " y:" << base_link_pose.getOrigin().y() << " yaw:" << yaw << " remainTime: " << remainDistance / 0.5);
+                ROS_INFO_STREAM("running" << "x:" << base_link_pose.getOrigin().x() << " y:" << base_link_pose.getOrigin().y() << " yaw:" << yaw << " remainTime: " << remainTimeInMin);
 	        }
 	        ROS_INFO("finish one point");
 
@@ -157,6 +158,18 @@ void Client::IPC_reachStartPoint()
     agent::commond srv;
     srv.request.type = 2;
     srv.request.value = status;
+    srv.request.x = base_link_pose.getOrigin().getX();
+    srv.request.y = base_link_pose.getOrigin().getY();
+    srv.request.yaw = tf::getYaw(base_link_pose.getRotation());
+
+    agent_client.call(srv);
+}
+void Client::RPC_sendRemainingTime(int remainingTime)
+{
+    agent::commond srv;
+    srv.request.type = 2;
+    srv.request.value = PARKINGTOSTART + 1;
+    srv.request.x = remainingTime;
     agent_client.call(srv);
 }
 void Client::navigation()
@@ -168,16 +181,29 @@ void Client::navigation()
     {
         if(status == STARTTOEND)
         {
-            vector<Pose> singlePathVector;
+            vector<Pose> singlePath;
             for(int i = 1; i < pathVector.size(); i++)
       		{
-      			singlePathVector.push_back(pathVector[i]);
+      			singlePath.push_back(pathVector[i]);
       			if(pathVector[i].type == 1)//该点为终点，退出循环
       				break;
       		}
             
+            //发送剩余时间跟agent-->server
+
+            double remainDistance = 0;
+            for(int goalIndex = 0; goalIndex < singlePath.size() - 1; goalIndex++)
+            {
+                remainDistance += std::sqrt((singlePath[goalIndex + 1].x - singlePath[goalIndex].x) * (singlePath[goalIndex + 1].x - singlePath[goalIndex].x)
+                                    + (singlePath[goalIndex + 1].y - singlePath[goalIndex].y) * (singlePath[goalIndex + 1].y - singlePath[goalIndex].y));
+            }
+            double remainTimeInMin = remainDistance / 0.5 / 60;
+            if(remainTimeInMin < 1)
+                remainTimeInMin = 1;
+            RPC_sendRemainingTime(remainTimeInMin);
+            
  			//开始行走
-            if(moveSinglePath(singlePathVector) == 0)
+            if(moveSinglePath(singlePath) == 0)
             {
                 ROS_INFO("reach end and change status to end");
                 status = END;
@@ -223,7 +249,6 @@ void Client::createPath()
     json path_json;
     string path_file;
     ros::param::get("~path_file", path_file);
-    path_file = "/home/roboway/catkin_roboway/src/bringup/map/000001/1_path.json";
     std::ifstream i;
     i.open(path_file);
     i >> path_json;
@@ -262,12 +287,12 @@ void Client::exec()
     std::thread pose_thread(&Client::get_pose_callback, this);
     pose_thread.detach();
 
-    std::thread navigation_thread(&Client::navigation, this);
-    navigation_thread.detach();
-
     ros::ServiceServer service = node.advertiseService("client/commond", &Client::commondCallback, this);
     agent_client = node.serviceClient<agent::commond>("agent/commond");
 
+    std::thread navigation_thread(&Client::navigation, this);
+    navigation_thread.detach();
+    
     ros::spin();
 }
 

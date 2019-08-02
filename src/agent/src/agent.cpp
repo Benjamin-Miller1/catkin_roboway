@@ -4,6 +4,7 @@
 #include <client/commond.h>
 #include "motor_control/motor_commond.h"
 #include <string>
+#include <iomanip>
 #include <signal.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -29,7 +30,12 @@ private:
     bool commondCallback(agent::commond::Request & request, agent::commond::Response & response);
     bool dealGui(agent::commond::Request & request, agent::commond::Response & response);
     bool dealKeyboard(int value);
-    bool dealClient(int value);
+    bool dealClient(agent::commond::Request & request);
+
+    double start_x{0};
+    double start_y{0};
+    double start_yaw{0};
+    
     void startNavigation();
     void stopNavigation();
 
@@ -40,6 +46,9 @@ private:
 
     string carId;
     bool isSendMsgToServer;
+    bool isOnline;
+    bool waitForHeartBeat{false};
+
     string serveraddrstr;
     string serverportstr;
     int sockfd = -1;
@@ -50,17 +59,19 @@ private:
     string endPoint_latitude;
     string realTimePoint_longitude;
     string realTimePoint_latitude;
-    double remainTimeInMin;
+    int remainTimeInMin;
 
     enum status_T {START, END, STARTTOEND, ENDTOSTART, STOP, PARKING, PARKINGTOSTART};
     status_T status_navigation{PARKINGTOSTART};
 
-    void init_socket();
+    bool init_socket();
     void readCommond();
+    void send_carID();
     void send_started();
     void send_reachStartPoint();
-    void send_realTimePoint(const ros::TimerEvent&);
+    void send_running();
     void send_reachEndPoint();
+    void send_heartBeat(const ros::TimerEvent&);
 
     void gps_callback(const geometry_msgs::Pose::ConstPtr& msg);
 
@@ -68,7 +79,7 @@ private:
     string currentMapName;
 };
 
-void Agent::init_socket()
+bool Agent::init_socket()
 {
     /*1.创建socket*/
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -90,6 +101,14 @@ void Agent::init_socket()
     if(connect(sockfd, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0)
     {
         ROS_INFO("connect server fail!");
+        close(sockfd);
+        sockfd = -1;
+        return false;
+    }
+    else
+    {
+        ROS_INFO("connect server success!");
+        return true;
     }
 }
 void Agent::RPC_sendStatus(int status)
@@ -108,11 +127,22 @@ void Agent::startNavigation()
     motor_control_client.call(motor_commond_srv);
 
     //修改launch文件中地图相关配置
-    std::stringstream ss;
-    ss << "python /home/roboway/catkin_roboway/src/bringup/script/modify_launch.py " << carId << " " << mapName;
-    std::string commond = ss.str();
-    system(commond.c_str());
-    currentMapName = mapName;
+    {
+        std::stringstream ss;
+        ss << "python /home/roboway/catkin_roboway/src/bringup/script/modify_launch.py " << carId << " " << mapName;
+        std::string commond = ss.str();
+        system(commond.c_str());
+        currentMapName = mapName;
+    }
+    
+    //修改amcl的初始位置
+    {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2);
+        ss << "python /home/roboway/catkin_roboway/src/bringup/script/modify_amcl.py " << start_x << " " << start_y << " " << start_yaw;
+        std::string commond = ss.str();
+        system(commond.c_str());
+    }
 
     //启动导航相关进程
     moveBase_fpid = fork();
@@ -151,77 +181,104 @@ void Agent::stopNavigation()
     }
     status = 0;
     status_navigation = PARKINGTOSTART;
-    mapName.clear();
 }
 
 void Agent::readCommond()
 {
     char buf[1024] = {0};
     int size;
-    while((size = read(sockfd, buf, sizeof(buf))) > 0)
+    static bool isFirstConnect = true;
+    while(1)
     {
-        try{
-            json commond = json::parse(buf);
-            ROS_INFO_STREAM(commond);
-            if(commond["communicationId"] != carId)
-                continue;
-            auto commandType = commond["commandType"];
-            if(commandType == "connection")
-            {
-                startPoint_longitude = commond["startPoint"]["longitude"];
-                startPoint_latitude = commond["startPoint"]["latitude"];
-                endPoint_longitude = commond["endPoint"]["longitude"];
-                endPoint_latitude = commond["endPoint"]["latitude"];
+        if(sockfd == -1)
+        {
+            ros::Duration(1).sleep();
+            ROS_INFO_STREAM("sockfd = -1");
+            continue;
+        }
 
-                ROS_INFO("car has connect to server, running to start");
-            }
-            else if(commandType == "start")
-            {
-                //接收mapName,同时启动导航进程;
-                
-                status_navigation = STARTTOEND;
-                if(client_fpid == -1)//第一次需要启动导航相关进程, 不能发送RPC消息
+        if((size = read(sockfd, buf, sizeof(buf))) > 0)
+        {
+            try{
+                json commond = json::parse(buf);
+                ROS_INFO_STREAM(commond);
+                auto commandType = commond["commandType"];
+                if(commandType == "connection")
                 {
-                    startNavigation();
-                }
-                else//如果启动了,查看是否需要更换地图, 如果不更换说明走了一个循环,则需要发送RPC/
-                {
-                    if(currentMapName == mapName)
-                        RPC_sendStatus(status_navigation);//通知client节点
-                    else
+                    ROS_INFO("car has connect to server, running to start");
+                    send_carID();
+                    if(isFirstConnect)
                     {
-                        stopNavigation();
-                        startNavigation();
+                        isFirstConnect = false;
+                        send_reachEndPoint();//车子启动后更新后台状态为终点,防止后台认为车子在起点导致可以发送start命令,在gui的启动业务后会向服务器发startpoint.
                     }
                 }
-                send_started();//通知后台server
-                ROS_INFO("running to end");
-            }
-            else if(commandType == "back")
-            {
-                //返回到起点
-                if(status_navigation == END || status_navigation == STOP)
+                else if(commandType == "start")
                 {
-                    status_navigation = ENDTOSTART;
-                    RPC_sendStatus(status_navigation);//通知client节点
-                    ROS_INFO("running to start");
+                    //接收mapName,同时启动导航进程;
+                    mapName = commond["mapNumber"];
+                    status_navigation = STARTTOEND;
+                    if(client_fpid == -1)//第一次需要启动导航相关进程, 不能发送RPC消息
+                    {
+                        startNavigation();
+                    }
+                    else//如果启动了,查看是否需要更换地图, 如果不更换说明走了一个循环,则需要发送RPC/
+                    {
+                        if(currentMapName == mapName)
+                            RPC_sendStatus(status_navigation);//通知client节点
+                        else
+                        {
+                            stopNavigation();
+                            startNavigation();
+                        }
+                    }
                 }
-            }
-            else if(commandType == "parking")
-            {
-                //暂时不处理
-            }
+                else if(commandType == "back")
+                {
+                    //返回到起点
+                    if(status_navigation == END || status_navigation == STOP)
+                    {
+                        status_navigation = ENDTOSTART;
+                        RPC_sendStatus(status_navigation);//通知client节点
+                        ROS_INFO("running to start");
+                    }
+                }
+                else if(commandType == "parking")
+                {
+                    //暂时不处理
+                }
+                else if(commandType == "heartbeat")
+                {
+                    waitForHeartBeat = false;
+                }
 
-            memset(buf, 0, sizeof(buf));
+                memset(buf, 0, sizeof(buf));
+            }
+            catch (json::exception& e)
+            {
+                // output exception information
+                ROS_INFO_STREAM("parse failure");
+                continue;
+            }
         }
-        catch (json::exception& e)
+        else
         {
-            // output exception information
-            ROS_INFO_STREAM("parse failure");
-            continue;
+            ROS_INFO_STREAM("read return " << size);
+            ros::Duration(0.1).sleep();
         }
     }
 }
+void Agent::send_carID()
+{
+    if(!isSendMsgToServer)
+        return;
+    json commond;
+    commond["communicationId"] = carId;
+    string commondString = commond.dump();
+    write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
+}
+
 void Agent::send_started()
 {
     if(!isSendMsgToServer)
@@ -229,12 +286,11 @@ void Agent::send_started()
     json commond;
     commond["position"]["longitude"] = startPoint_longitude;
     commond["position"]["latitude"] = startPoint_latitude;
-    commond["location"] = "started";
+    commond["carOperationState"] = "started";
     commond["communicationId"] = carId;
     commond["arriveTime"] = std::to_string(remainTimeInMin);
 
     string commondString = commond.dump();
-    commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
     ROS_INFO_STREAM(commond);
 }
@@ -246,29 +302,24 @@ void Agent::send_reachStartPoint()
     json commond;
     commond["position"]["longitude"] = startPoint_longitude;
     commond["position"]["latitude"] = startPoint_latitude;
-    commond["location"] = "startPoint";
+    commond["carOperationState"] = "startPoint";
     commond["communicationId"] = carId;
 
     string commondString = commond.dump();
-    commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
     ROS_INFO_STREAM(commond);
 }
-void Agent::send_realTimePoint(const ros::TimerEvent&)
+void Agent::send_running()
 {
-    if((status != STARTTOEND) || (status != ENDTOSTART))
-        return;
     if(!isSendMsgToServer)
         return;
     json commond;
     commond["position"]["longitude"] = realTimePoint_longitude;
     commond["position"]["latitude"] = realTimePoint_latitude;
-    commond["location"] = "running";
+    commond["carOperationState"] = "running";
     commond["communicationId"] = carId;
-    commond["arriveTime"] = std::to_string(remainTimeInMin);
 
     string commondString = commond.dump();
-    commondString = "$" + commondString + "$";
     write(sockfd, commondString.c_str(), commondString.size());
     ROS_INFO_STREAM(commond);
 }
@@ -279,11 +330,47 @@ void Agent::send_reachEndPoint()
     json commond;
     commond["position"]["longitude"] = endPoint_longitude;
     commond["position"]["latitude"] = endPoint_latitude;
-    commond["location"] = "endPoint";
+    commond["carOperationState"] = "endPoint";
     commond["communicationId"] = carId;
 
     string commondString = commond.dump();
-    commondString = "$" + commondString + "$";
+    write(sockfd, commondString.c_str(), commondString.size());
+    ROS_INFO_STREAM(commond);
+}
+void Agent::send_heartBeat(const ros::TimerEvent&)
+{
+    static int waitForHeartBeatTimes = 0;
+    if(!isSendMsgToServer)
+        return;
+    if(waitForHeartBeat)
+    {
+        waitForHeartBeatTimes++;
+        if(waitForHeartBeatTimes >= 2)
+        {
+            //中断
+            ROS_INFO("tcp disconnected!");
+            if(sockfd != -1)
+            {
+                shutdown(sockfd,SHUT_RD);//可以让阻塞的read函数返回
+                sockfd = -1;
+            }
+
+            if(init_socket() == true)//恢复连接后将标志位置位
+            {
+                waitForHeartBeat = false;
+                waitForHeartBeatTimes = 0;
+            }
+        }
+        return;
+    }
+    waitForHeartBeatTimes = 0;
+    waitForHeartBeat = true;
+    json commond;
+    
+    commond["carOperationState"] = "heartbeat";
+    commond["communicationId"] = carId;
+
+    string commondString = commond.dump();
     write(sockfd, commondString.c_str(), commondString.size());
     ROS_INFO_STREAM(commond);
 }
@@ -339,6 +426,9 @@ bool Agent::dealGui(agent::commond::Request & request, agent::commond::Response 
             break;
         case 3:
             stopNavigation();
+            start_x = 0;
+            start_y = 0;
+            start_yaw = 0;
             response.returnValue = true;
             break;
         case 4:
@@ -371,7 +461,6 @@ bool Agent::dealKeyboard(int value)
                     startNavigation();
                 }
             }
-            send_started();//通知后台server
         }
     }
     else if(value == 2) //返回
@@ -390,9 +479,17 @@ bool Agent::dealKeyboard(int value)
         }
     }
 }
-bool Agent::dealClient(int value)
+bool Agent::dealClient(agent::commond::Request & request)
 {
-    status_T status = static_cast<status_T>(value);
+    if(request.value > PARKINGTOSTART)//client去终点后回应的剩余时间
+    {
+        remainTimeInMin = request.x;
+        send_started();//通知后台server
+        send_running();
+        ROS_INFO("running to end");
+        return true;
+    }
+    status_T status = static_cast<status_T>(request.value);
     switch (status)
     {
         case END:
@@ -401,6 +498,11 @@ bool Agent::dealClient(int value)
             break;
         case START:
             status_navigation = status;
+            start_x = request.x;
+            start_y = request.y;
+            start_yaw = request.yaw;
+            ROS_INFO_STREAM("x: " << start_x << " y: " << start_y << " yaw: " << start_yaw);
+
             send_reachStartPoint();
             break;
         default:
@@ -421,7 +523,7 @@ bool Agent::commondCallback(agent::commond::Request & request, agent::commond::R
             dealKeyboard(request.value);
             break;
         case 2:
-            dealClient(request.value);
+            dealClient(request);
             break;
         default:
             break;
@@ -446,9 +548,7 @@ Agent::Agent()
     if(isSendMsgToServer)
     {
         init_socket();
-        string startCode = "$@@@@" + carId + "$";
-        const char* startCode_ = startCode.c_str();
-        write(sockfd, startCode_, strlen(startCode_));
+        isOnline = true;
     }
 }
 Agent::~Agent()
@@ -462,7 +562,7 @@ void Agent::exec()
     client_client = node.serviceClient<client::commond>("client/commond");
     motor_control_client = node.serviceClient<motor_control::motor_commond>("motor_control/commond");
     ros::Subscriber cmd_sub = node.subscribe<geometry_msgs::Pose>("/gps", 10, &Agent::gps_callback, this);
-    ros::Timer sendRealTimePointTimer = node.createTimer(ros::Duration(5), &Agent::send_realTimePoint, this);
+    ros::Timer sendHeartBeatTimer = node.createTimer(ros::Duration(5), &Agent::send_heartBeat, this);
 
     std::thread receive_thread(&Agent::readCommond, this);
     receive_thread.detach();

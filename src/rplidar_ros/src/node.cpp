@@ -106,9 +106,9 @@ static int scan_count = 0;
         scan_msg.ranges[i] = std::numeric_limits<float>::infinity(); 
     } 
 
-    int degree_90_count = node_count / 4 - node_count *15 / 360;
+    int degree_90_count = node_count / 4 - node_count *10 / 360; //让出10度
     int degree_180_count = node_count / 2;
-    int degree_270_count = node_count / 4 * 3;
+    int degree_270_count = node_count / 4 * 3 + node_count *10 / 360; //让出10度
 
     //将数据分别对应设置进去 
    for (size_t i = 0; i < node_count; i++)
@@ -119,6 +119,7 @@ static int scan_count = 0;
 
         if(i > degree_90_count && i < degree_270_count)
             continue;
+        
         if (read_value == 0.0) 
             scan_msg.ranges[node_count - i - 1] = std::numeric_limits<float>::infinity(); 
         else 

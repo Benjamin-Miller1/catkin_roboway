@@ -17,4 +17,5 @@
     
     <!--include file="$(find bringup)/launch/lms1xx.launch"/-->
 
+    <include file="$(find rplidar_ros)/launch/rplidar_s1.launch" />
 </launch>
